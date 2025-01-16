@@ -1,4 +1,5 @@
 import math
+import random
 
 from .initializators.dict import initializatorsDict
 from .initializators.xavier import XavierInitializatorFunction
@@ -19,7 +20,10 @@ class Dense(Layer):
         self.inputsCount = self._inputsCount
         self.weightsCount = self._weightsCount
 
-        self.seed = seed
+        if seed is None:
+            self.seed = random.Random(seed).random()
+        else:
+            self.seed = seed
 
         self.initializator = XavierInitializatorFunction() if initializator is None else initializator
 

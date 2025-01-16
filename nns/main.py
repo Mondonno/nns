@@ -56,17 +56,19 @@ def rangeWithFloatStep(start, stop, step = 1):
     return rangeList
 
 model = Sequential([
+    # Dense(1, 1, LinearFunction(), seed = None),
     Dense(1, 1, LinearFunction(), seed = None),
-    # Dense(1, 2, LinearFunction(), seed = None),
     # Dense(2, 4, LinearFunction(), seed = None),
     # Dense(4, 2, LinearFunction(), seed = None),
     Dense(1, 2, SineLinearFunction(), seed = None),
-    Dense(2, 2, LinearFunction(), seed = None),
-    Dense(2, 2, SineLinearFunction(), seed = None),
-    Dense(2, 1, LinearFunction(), seed = None)
+    # Dense(1, 2, LinearFunction(), seed = None),
+    Dense(2, 1, LinearFunction(), seed = None),
+
+    # Dense(2, 2, SineLinearFunction(), seed = None),
+   # Dense(2, 1, LinearFunction(), seed = None)
 ], MSEFunction(), CustomLearningRateFunction(), optimizers=[
-    MomentumOptimizerFunction()
-    # ClippingOptimizerFunction()
+   # MomentumOptimizerFunction()
+   # ClippingOptimizerFunction()
 ])
 
 def getLastNSavedModelPaths(n: int, modelsPath: pathlib.Path):
@@ -237,7 +239,7 @@ if trainModel:
     dataset = Dataset(ioSize, inputs, outputs, 32)
 
     try:
-        modelInUse.fit(dataset, 600)
+        modelInUse.fit(dataset, 7000)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise

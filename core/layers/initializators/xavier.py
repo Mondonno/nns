@@ -1,4 +1,5 @@
 import math
+import random
 
 from random import Random
 
@@ -8,7 +9,11 @@ class XavierInitializatorFunction(Function):
     def __init__(self, seed = None) -> None:
         self.name = self.__class__.__name__
 
-        self.seed = seed
+        if seed is None:
+            self.seed = random.Random(seed).random()
+        else:
+            self.seed = seed
+
         self.random = Random(seed)
 
     def call(self, layer, neuronIndex, inputIndex):

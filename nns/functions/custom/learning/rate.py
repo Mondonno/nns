@@ -10,8 +10,8 @@ class CustomLearningRateFunction(Function):
         # 0.0009 * 1/(1 + (1.009 ** epochIndex))
         # 0.00009 / (1 + (epochIndex / 100))
         # / (1 + (epochIndex / 18))
-        return 0.0003
-    
+        # return 0.0003
+        return 0.0001
     @classmethod
     def fromDict(self, *_):
         return (self)()
