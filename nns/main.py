@@ -57,12 +57,12 @@ def rangeWithFloatStep(start, stop, step = 1):
 
 model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),
-    Dense(1, 1, LinearFunction(), seed = None),
+    # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(2, 4, LinearFunction(), seed = None),
     # Dense(4, 2, LinearFunction(), seed = None),
-    Dense(1, 2, SineLinearFunction(), seed = None),
+    Dense(1, 1, SineLinearFunction(), seed = None),
     # Dense(1, 2, LinearFunction(), seed = None),
-    Dense(2, 1, LinearFunction(), seed = None),
+    # Dense(2, 1, LinearFunction(), seed = None),
 
     # Dense(2, 2, SineLinearFunction(), seed = None),
    # Dense(2, 1, LinearFunction(), seed = None)
