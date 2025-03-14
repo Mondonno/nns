@@ -17,7 +17,11 @@ class XavierInitializatorFunction(Function):
         self.random = Random(seed)
 
     def call(self, layer, neuronIndex, inputIndex):
-        if inputIndex == (layer.inputsCount - 1): # it is a bias, xavier sets biases to zero
+        print("NEURON INDEX/INPUTINDEX")
+        print(neuronIndex, inputIndex, layer.inputsCount)
+
+        # inputsCount is not -1 because it does not include bias
+        if inputIndex == (layer.inputsCount): # it is a bias, xavier sets biases to zero
             return 0
 
         xavierExpression = math.sqrt(6) / math.sqrt(layer.inputsCount + layer.neuronsCount)

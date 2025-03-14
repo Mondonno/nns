@@ -55,12 +55,22 @@ def rangeWithFloatStep(start, stop, step = 1):
     
     return rangeList
 
+
+# 1. czym jest siec
+# 2. czym jest neuron
+# 3. czym jest warstwa
+# 4. czym są epoki
+# 5. wpływ warstw
+# 6. wpływ learning rate
+# 7. wpływ funkcji
+# 8. inne sieci
+
 model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(2, 4, LinearFunction(), seed = None),
     # Dense(4, 2, LinearFunction(), seed = None),
-    Dense(1, 1, SineLinearFunction(), seed = None),
+    Dense(1, 1, SineFunction(), seed = None),
     # Dense(1, 2, LinearFunction(), seed = None),
     # Dense(2, 1, LinearFunction(), seed = None),
 
@@ -135,8 +145,8 @@ def generateIO(inputFunction: Function, outputFunction: Function):
 
     for i in iterations:
         # (1.1 * random.random() - 1)
-        inputs.append([ outputFunction.call(i) ])
-        outputs.append([ inputFunction.call(i) ])
+        inputs.append([ inputFunction.call(i) ])
+        outputs.append([ outputFunction.call(i) ])
 
     return len(iterations), inputs, outputs
 
@@ -202,7 +212,7 @@ def importModelWithDefaultObjects(modelType, encodedModel):
 
     return modelType.fromDict(encodedModel, defaultDict)
 
-class CustomOutputFunction(Function):
+class CustomInputFunction(Function):
     def __init__(self):
         super().__init__()
 
@@ -231,15 +241,15 @@ if modelLoadAgreement:
     modelInUse = importedModel
     trainModel = False
 
-ioSize, inputs, outputs = generateIO(CustomSineFunction(),  CustomOutputFunction())
+ioSize, inputs, outputs = generateIO(CustomInputFunction(), CustomSineFunction())
 
 print("Generated training IO size:", ioSize)
 
 if trainModel:
-    dataset = Dataset(ioSize, inputs, outputs, 32)
+    dataset = Dataset(ioSize, inputs, outputs, 1)
 
     try:
-        modelInUse.fit(dataset, 7000)
+        modelInUse.fit(dataset, 1000)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise

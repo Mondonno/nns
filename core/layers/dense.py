@@ -48,6 +48,7 @@ class Dense(Layer):
 
     # 1 -> 2 1
     def __fillInputs(self, inputs):
+        # this makes each neuron with its own inputs set "replicted" to fill it's hunger
 
         # print("pre-Fla", inputs)
         flattenedInputs = self.__flattenInputs(inputs)
@@ -77,9 +78,10 @@ class Dense(Layer):
                     _ = inputs[i][j]
                     _ = self.weights[i][j]
                     print(self.weights[i][j], inputs[i][j])
+
                 singleWeightedSum += self.weights[i][j] * inputs[i][j]
             
-            # a bias
+            # a bias, it is the last on inputs
             singleWeightedSum += self.weights[i][self._inputsCount]
 
             weightedSum[i] = singleWeightedSum
@@ -95,6 +97,10 @@ class Dense(Layer):
         # print("FFFF: ",filledInputs)
 
         weightedSum = self.weightedSum(filledInputs)
+
+        # print(self.weights)
+        # print(weightedSum)
+
         derivatives = []
         
         for i in range(self._neuronsCount):

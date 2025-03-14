@@ -4,8 +4,8 @@ class CustomSineFunction(SineFunction):
     def __init__(self):
         super().__init__()
 
-        self.coefficient = 7
-        self.bias = 6
+        self.coefficient = 1
+        self.bias = 10
 
 class CustomSineSimplifiedFunction(SineFunction):
     def __init__(self):
