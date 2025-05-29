@@ -70,14 +70,14 @@ model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(2, 4, LinearFunction(), seed = None),
     # Dense(4, 2, LinearFunction(), seed = None),
-    Dense(1, 1, SineFunction(), seed = None),
-    # Dense(1, 2, LinearFunction(), seed = None),
+    # Dense(1, 1, SineFunction(), seed = None),
+    Dense(1, 2, LinearFunction(), seed = None),
     # Dense(2, 1, LinearFunction(), seed = None),
 
-    # Dense(2, 2, SineLinearFunction(), seed = None),
-   # Dense(2, 1, LinearFunction(), seed = None)
+    Dense(2, 2, SineLinearFunction(), seed = None),
+   Dense(2, 1, LinearFunction(), seed = None)
 ], MSEFunction(), CustomLearningRateFunction(), optimizers=[
-   # MomentumOptimizerFunction()
+#    MomentumOptimizerFunction()
    # ClippingOptimizerFunction()
 ])
 
@@ -226,7 +226,7 @@ modelInUse = model
 trainModel = True
 
 if modelLoadAgreement:
-    modelPaths = getLastNSavedModelPaths(5, MODELS_FOLDER_PATH)
+    modelPaths = getLastNSavedModelPaths(10, MODELS_FOLDER_PATH)
     singleModelPath = promptChoosingSinglePathFromPaths(modelPaths)
 
     encodedModelAsString = singleModelPath.read_text()
@@ -249,7 +249,7 @@ if trainModel:
     dataset = Dataset(ioSize, inputs, outputs, 1)
 
     try:
-        modelInUse.fit(dataset, 1000)
+        modelInUse.fit(dataset, 10000)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise
@@ -268,6 +268,10 @@ print("Coverage test for model, result", modelInUse.forwardPassByOutputLayer([
 
 inputsDecoded, outputsDecoded = decodeIO(inputs, outputs)
 predictedValues = predictFromInputs(modelInUse, inputs)
+
+print("Inputs decoded:", len(inputsDecoded))  # Display first 10 inputs for quick overview
+print("Outputs decoded:", len(outputsDecoded))  # Display first 10 outputs for quick overview
+print("Predicted values", len(predictedValues))  # Display first 10 predicted values for quick overvi
 
 createPlotFromIO(inputsDecoded, outputsDecoded, predictedValues)
 savePlotFigureToFile(PLOT_FIGS_FOLDER)

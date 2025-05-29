@@ -130,6 +130,98 @@ class Dense(Layer):
         
         return filledInputs, outputs
     
+    def backwardPass(self, inputs, expectedOutputsErrorDerivatives, debug=False):
+        
+        #currentLayerInputs = previousLayerOutputs
+        
+        # _ = previousLayerOutputs # this is the inputs for the current layer 
+        # _ = currentLayerOutputs # we calculate based on inputs 
+
+        # filledInputs, layerOutputs = self.forwardPass(inputs)
+        # 
+        # ...
+        # currentLayerActivationDerivativesForNeurons = currentLayer.derivatives(filledInputs)
+
+        filledInputs, layerOutputs = self.forwardPass(inputs)
+        layerWeightsDerivativesVector = []
+
+        currentLayer = self
+        currentLayerNeuronsCount = currentLayer.neuronsCount
+
+        currentLayerInputsCount = currentLayer.inputsCount
+        currentLayerActualWeightsCount = currentLayer.weightsCount 
+        currentLayerInputsWithBiasCount = currentLayerActualWeightsCount
+
+        # currentLayerInputsCount = self.layers[previousLayerIndex].neuronsCount
+        # nextLayerErrorDerivatives = [ None for _ in range(self.layers[previousLayerIndex].neuronsCount)]
+        # currentLayerErrorDerivatives = [ None for _ in range(currentLayerNeuronsCount)]
+        # activationDerivativesForNeurons[currentLayerIndex] = self.layers[currentLayerIndex].derivatives(layerOutputs[currentLayerOutputIndex])
+        currentLayerActivationDerivativesForNeurons = currentLayer.derivatives(filledInputs)
+
+        currentLayerErrorDerivatives = expectedOutputsErrorDerivatives
+        nextLayerErrorDerivatives = [ None for _ in range(currentLayerInputsCount)]
+
+        for k in range(currentLayer.neuronsCount): # a connection (input and weight) between the k'th and m'th neuron, respectively from layer L, and L + 1 ( the m'th neuron on the L + 1 layer has the weight )
+            currentLayerWeights = currentLayer.weights[k]
+
+            # print("M loops", currentLayerInputsCount)
+
+            # currentLayerInputsCount = self.layers[previousLayerIndex].neuronsCount
+            for m in range(currentLayerInputsCount): # the len(previousLayerOutputs) of previous layer outputs should be equal to the inputs count of current layer
+                # print(currentErrorDerivative)
+
+                # print(currentLayerIndex)
+                # if(previousLayerIndex < 0):
+                #     break
+
+                currentWeight = currentLayerWeights[m]
+                # currentInput = previousLayerOutputs[k][m]
+
+                # del a / del z
+                # currentActivationDerivative = activationDerivativesForNeurons[currentLayerIndex][k] # m'th neuron from L Layer
+                currentActivationDerivative = currentLayerActivationDerivativesForNeurons[k] # m'th neuron from L Layer
+
+                # [del C / del a]
+                # currentLayerErrorDerivatives = errorDerivativesForNeurons[currentLayerIndex]
+
+                # del C / del z
+                currentErrorDerivative = currentLayerErrorDerivatives[k] or 1
+
+                if (nextLayerErrorDerivatives[m] == None):
+                    # print("change")
+                    nextLayerErrorDerivatives[m] = 0
+
+                # del C / del z = del a / del z * del C / del a
+                # del C / del z
+                nextLayerErrorDerivatives[m] += currentWeight * currentActivationDerivative * currentErrorDerivative
+                # print(errorDerivativesForNeurons[previousLayerIndex][m], currentWeight, currentActivationDerivative, currentErrorDerivative)
+
+            # print(errorDerivativesForNeurons)
+            for l in range(currentLayerInputsWithBiasCount):
+                currentPreviousLayerOutput = 1
+
+                if(l != currentLayerInputsCount): # handling bias
+                    # print(k, l, previousLayerOutputsIndex)
+                    # print(k, l, previousLayerOutputs, previousLayerOutputs[k])
+                    # one neuron can have multiple inputs, so we need to get the k'th neuron and l'th output
+                    currentPreviousLayerOutput = inputs[k][l]
+
+                currentActivationDerivative = currentLayerActivationDerivativesForNeurons[k]
+                currentErrorDerivative = currentLayerErrorDerivatives[k] or 1
+
+                singleWeightDerivative = currentPreviousLayerOutput * currentActivationDerivative * currentErrorDerivative
+
+                if(singleWeightDerivative != 0):
+                    # raise TypeError()
+                    pass
+
+                # print(currentLayerIndex, k, l, singleWeightDerivative)
+
+                layerWeightsDerivativesVector.append(singleWeightDerivative)
+                # weightsDerivativesMatrix[currentLayerIndex][k][l].append(singleWeightDerivative)
+
+        return layerWeightsDerivativesVector, nextLayerErrorDerivatives
+
     @classmethod
     def fromDict(self, objectDict, additionalDict):
         referenceDict = initializatorsDict | additionalDict
