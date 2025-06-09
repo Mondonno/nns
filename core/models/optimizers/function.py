@@ -5,7 +5,7 @@ class OptimizerFunction(Function):
         super().__init__()
 
     def call(self, gradientValue, gradientVector):
-        raise NotImplementedError("Gptimizer function must have call method defined")
+        raise NotImplementedError("Optimizer function must have call method defined")
     
     def derivative(self):
         raise NotImplementedError("Optimizer function shouldn't have derivative defined")

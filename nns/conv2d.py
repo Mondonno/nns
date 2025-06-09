@@ -14,6 +14,9 @@ from .functions.custom.learning.rate import CustomLearningRateFunction
 from ..core.models.sequential import Sequential
 
 from ..core.layers.dense import Dense
+from ..core.layers.convolution2d import Convolution2D
+from ..core.layers.maxpool2d import MaxPooling2D
+from ..core.layers.flatten import Flatten
 from ..core.layers.blank import Blank
 
 from ..core.datasets.dataset import Dataset
@@ -25,36 +28,60 @@ from ..core.functions.linear import LinearFunction
 from ..core.functions.relu import RectifiedLinearFunction
 from ..core.functions.sine import SineFunction
 
-from ..core.models.optimizers import ClippingOptimizerFunction, MomentumOptimizerFunction
+from ..core.datasets.image_dataset import ImageDataset
 
+from ..core.datasets.image_dataset import ImageDataset
+from ..core.datasets.transforms.min_max import MinMaxTransformFunction
+from ..core.models.optimizers import ClippingOptimizerFunction, MomentumOptimizerFunction
 from ..core.dict import DictEncoder
 
 from .playground import *
 
-# 1. czym jest siec
-# 2. czym jest neuron
-# 3. czym jest warstwa
-# 4. czym są epoki
-# 5. wpływ warstw
-# 6. wpływ learning rate
-# 7. wpływ funkcji
-# 8. inne sieci
+class LabelFunction(Function):
+    def __init__(self):
+        super().__init__()
+
+    def call(self, filepath):
+        import os
+        return int(os.path.basename(os.path.dirname(filepath)))
+
+class TransformFunction(MinMaxTransformFunction):
+    def __init__(self):
+        super().__init__(min_value=0, max_value=255)
+
+    def call(self, imageArray):
+        print(imageArray)
+        for i in range(len(imageArray)):
+            for j in range(len(imageArray[i])):
+                print(imageArray[i][j])
+                imageArray[i][j] = super().call(imageArray[i][j])
+        return imageArray
+
+# get home directory
+HOME_DIRECTORY = pathlib.Path.home()
+MNIST_DIRECTORY = HOME_DIRECTORY / "Documents" / "Projects" / "learning" / "mnist-pngs-main" / "train"
+
+mnist_dataset = ImageDataset(
+    directory=MNIST_DIRECTORY,
+    batchSize=32,                         # batch size
+    transformFunction=TransformFunction(),               
+    appendBatchResidue=False,             # usually False
+    labelFunction=LabelFunction,    # function to extract label from filename
+    imageShape=(28, 28),                  # MNIST images are 28x28
+    grayscale=True                        # MNIST is grayscale
+)
 
 model = Sequential([
-    # Dense(1, 1, LinearFunction(), seed = None),
-    # Dense(1, 1, LinearFunction(), seed = None),
-    # Dense(2, 4, LinearFunction(), seed = None),
-    # Dense(4, 2, LinearFunction(), seed = None),
-    # Dense(1, 1, SineFunction(), seed = None),
-    Dense(1, 2, LinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
-
-    # Dense(2, 2, SineLinearFunction(), seed = None),
-   Dense(2, 1, LinearFunction(), seed = None)
+    MaxPooling2D(poolSize=(2,2)),
+    Convolution2D(out_channels=2, kernel_size=(3, 3)),
+    MaxPooling2D(poolSize=(2,2)),
+    Convolution2D(out_channels=3, kernel_size=(3, 3)),
+    MaxPooling2D(poolSize=(2,2)),
+    Convolution2D(out_channels=3, kernel_size=(3, 3)),
+    Flatten(),
+    Dense(12, 10, RectifiedLinearFunction(), seed=42),
 ], MSEFunction(), CustomLearningRateFunction(), optimizers=[
-#    MomentumOptimizerFunction()
+    # MomentumOptimizerFunction()
    # ClippingOptimizerFunction()
 ])
 
@@ -87,15 +114,15 @@ if modelLoadAgreement:
     modelInUse = importedModel
     trainModel = False
 
-ioSize, inputs, outputs = generateIO(CustomInputFunction(), CustomLinearFunction())
+ioSize = mnist_dataset.size
+inputs = mnist_dataset.inputs
+outputs = mnist_dataset.outputs
 
-print("Generated training IO size:", ioSize)
+print("Gathered training IO size:", ioSize)
 
 if trainModel:
-    dataset = Dataset(ioSize, inputs, outputs, 1)
-
     try:
-        modelInUse.fit(dataset, 100)
+        modelInUse.fit(mnist_dataset, 100)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise
@@ -112,14 +139,14 @@ print("Coverage test for model, result", modelInUse.forwardPassByOutputLayer([
     3
 ]))
 
-inputsDecoded, outputsDecoded = decodeIO(inputs, outputs)
 predictedValues = predictFromInputs(modelInUse, inputs)
 
-print("Inputs decoded:", len(inputsDecoded))  # Display first 10 inputs for quick overview
-print("Outputs decoded:", len(outputsDecoded))  # Display first 10 outputs for quick overview
-print("Predicted values", len(predictedValues))  # Display first 10 predicted values for quick overvi
+print("Inputs:", len(inputs))  
+print("Outputs:", len(outputs)) 
+print("Predicted:", len(predictedValues)) 
+print("Accuracy", calculateAccuracy(outputs, predictedValues))
 
-createPlotFromIO(inputsDecoded, outputsDecoded, predictedValues)
+# createPlotFromIO(inputsDecoded, outputsDecoded, predictedValues)
 savePlotFigureToFile(PLOT_FIGS_FOLDER)
 
 displayPlot()
