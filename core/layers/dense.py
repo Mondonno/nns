@@ -109,6 +109,9 @@ class Dense(Layer):
         return derivatives
     
     def forwardPass(self, inputs, debug= False):
+        if debug:
+            print("Inputs: ", inputs)
+
         filledInputs = self.__fillInputs(inputs)
 
         # print(filledInputs, self._inputsCount, self._neuronsCount)

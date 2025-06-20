@@ -38,7 +38,7 @@ class Sequential(Model):
                 weightsDerivativesVector = []
 
                 # del C / del w
-                weightsDerivativesMatrix = [ [ [ [] for _ in range(len(self.layers[i].weights[j])) ] for j in range(self.layers[i].neuronsCount)] for i in range(len(self.layers)) ]                
+                # weightsDerivativesMatrix = [ [ [ [] for _ in range(len(self.layers[i].weights[j])) ] for j in range(self.layers[i].neuronsCount)] for i in range(len(self.layers)) ]                
                 batchErrorValues = []
 
                 for batchInputs, batchOutputs in batch:

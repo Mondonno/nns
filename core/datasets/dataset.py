@@ -2,10 +2,13 @@ from random import shuffle
 
 class Dataset():
     def __init__(self, size, inputs, outputs, batchSize, appendBatchResidue = False):
-        self.size = size
-
         self.inputs = inputs
         self.outputs = outputs
+
+        if size is None:
+            self.size = min(len(self.inputs), len(self.outputs))
+        else:
+            self.size = size
 
         self.batchSize = batchSize
         self.appendBatchResidue = appendBatchResidue

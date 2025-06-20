@@ -40,19 +40,25 @@ from .playground import *
 # 7. wpływ funkcji
 # 8. inne sieci
 
+class StaticSineLayer(Dense):
+    # inputsCount, neuronsCount, activation, seed, initializator = None, weights = None
+    def __init__(self):
+        super().__init__(1, 1, SineFunction(), seed=None, initializator=None, weights=[[1, 0]])
+        # n n_w n_b i -> i * 
+
 model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(2, 4, LinearFunction(), seed = None),
     # Dense(4, 2, LinearFunction(), seed = None),
     # Dense(1, 1, SineFunction(), seed = None),
-    Dense(1, 2, LinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
-    Dense(2, 2, RectifiedLinearFunction(), seed = None),
+    StaticSineLayer(),
+    # Dense(2, 2, RectifiedLinearFunction(), seed = None),
+    # Dense(2, 2, RectifiedLinearFunction(), seed = None),
+    # Dense(2, 2, RectifiedLinearFunction(), seed = None),
 
-    # Dense(2, 2, SineLinearFunction(), seed = None),
-   Dense(2, 1, LinearFunction(), seed = None)
+    # Dense(2, 2, SineFunction(), seed = None),
+   Dense(1, 1, LinearFunction(), seed = None)
 ], MSEFunction(), CustomLearningRateFunction(), optimizers=[
 #    MomentumOptimizerFunction()
    # ClippingOptimizerFunction()
@@ -87,15 +93,17 @@ if modelLoadAgreement:
     modelInUse = importedModel
     trainModel = False
 
-ioSize, inputs, outputs = generateIO(CustomInputFunction(), CustomLinearFunction())
+ioSize, inputs, outputs = generateIO(CustomInputFunction(), CustomSineFunction())
 
 print("Generated training IO size:", ioSize)
+print("Inputs sample", inputs[:10])  # Display first 10 inputs for quick overview
+print("Outputs sample", outputs[:10])  # Display first 10 outputs for quick overview
 
 if trainModel:
-    dataset = Dataset(ioSize, inputs, outputs, 1)
+    dataset = Dataset(ioSize, inputs, outputs, 128)
 
     try:
-        modelInUse.fit(dataset, 100)
+        modelInUse.fit(dataset, 1000)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise

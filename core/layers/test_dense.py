@@ -1,5 +1,7 @@
 import math
 import pytest
+
+from nns.core.functions import SineFunction
 from nns.core.layers.dense import Dense
 
 class DummyActivation:
@@ -11,6 +13,18 @@ class DummyActivation:
 class DummyInitializator:
     def call(self, layer, i, j):
         return 0.5
+
+def test_dense_forward_pass_with_sine():
+    activation = SineFunction()
+    initializator = DummyInitializator()
+    dense = Dense(inputsCount=2, neuronsCount=2, activation=activation, seed=42, initializator=initializator)
+    # 2 inputs + bias, all weights 0.5
+    inputs = [[1, 2]]
+    filled_inputs, outputs = dense.forwardPass(inputs)
+    # Each neuron: weighted sum = 1*0.5 + 2*0.5 + 0.5 = 2.0, output = sin(2.0)
+    expected_output = math.sin(2.0)
+    assert outputs == [[expected_output], [expected_output]]
+    assert filled_inputs == [[1, 2], [1, 2]]
 
 def test_dense_forward_pass_basic():
     activation = DummyActivation()
