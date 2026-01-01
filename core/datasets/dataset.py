@@ -1,7 +1,7 @@
-from random import shuffle
+from random import *
 
 class Dataset():
-    def __init__(self, size, inputs, outputs, batchSize, appendBatchResidue = False):
+    def __init__(self, size, inputs, outputs, batchSize, seed = None, appendBatchResidue = False):
         self.inputs = inputs
         self.outputs = outputs
 
@@ -10,8 +10,15 @@ class Dataset():
         else:
             self.size = size
 
+        if seed is None:
+            self.seed = Random().random()
+        else:
+            self.seed = seed
+
         self.batchSize = batchSize
         self.appendBatchResidue = appendBatchResidue
+
+        self.randomNumberGenerator = Random(self.seed)
 
         if(self.batchSize > self.size):
             raise ValueError()
@@ -20,7 +27,7 @@ class Dataset():
         dataIndicies = [ i for i in range(self.size) ]
         shuffledIndicies = dataIndicies
 
-        shuffle(shuffledIndicies)
+        self.randomNumberGenerator.shuffle(shuffledIndicies)
 
         shuffledInputs = [ self.inputs[i] for i in range(len(shuffledIndicies)) ]
         shuffledOutputs = [ self.outputs[i] for i in range(len(shuffledIndicies)) ]

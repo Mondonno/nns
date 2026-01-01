@@ -43,7 +43,7 @@ from .playground import *
 class StaticSineLayer(Dense):
     # inputsCount, neuronsCount, activation, seed, initializator = None, weights = None
     def __init__(self):
-        super().__init__(1, 1, SineFunction(), seed=None, initializator=None, weights=[[1, 0]])
+        super().__init__(1, 1, SineFunction(), seed=10, initializator=None, weights=[[1, 0]])
         # n n_w n_b i -> i * 
 
 model = Sequential([
@@ -58,7 +58,7 @@ model = Sequential([
     # Dense(2, 2, RectifiedLinearFunction(), seed = None),
 
     # Dense(2, 2, SineFunction(), seed = None),
-   Dense(1, 1, LinearFunction(), seed = None)
+   Dense(1, 1, LinearFunction(), seed = 10)
 ], MSEFunction(), CustomLearningRateFunction(), optimizers=[
 #    MomentumOptimizerFunction()
    # ClippingOptimizerFunction()
@@ -100,10 +100,10 @@ print("Inputs sample", inputs[:10])  # Display first 10 inputs for quick overvie
 print("Outputs sample", outputs[:10])  # Display first 10 outputs for quick overview
 
 if trainModel:
-    dataset = Dataset(ioSize, inputs, outputs, 128)
+    dataset = Dataset(ioSize, inputs, outputs, 128, seed=1)
 
     try:
-        modelInUse.fit(dataset, 1000)
+        modelInUse.fit(dataset, 2000)
     except Exception as e:
         print("Saving model for future use, error while training occured", e)
         raise

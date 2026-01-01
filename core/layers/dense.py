@@ -7,7 +7,7 @@ from .initializators.xavier import XavierInitializatorFunction
 from .layer import Layer
 
 class Dense(Layer):
-    def __init__(self, inputsCount, neuronsCount, activation, seed, initializator = None, weights = None):
+    def __init__(self, inputsCount, neuronsCount, activation, seed = None, initializator = None, weights = None):
         super().__init__()
 
         self.name = self.__class__.__name__
@@ -25,7 +25,7 @@ class Dense(Layer):
         else:
             self.seed = seed
 
-        self.initializator = XavierInitializatorFunction() if initializator is None else initializator
+        self.initializator = XavierInitializatorFunction(seed=self.seed) if initializator is None else initializator
 
         # randomInstance = Random(self.seed)
 
@@ -35,6 +35,8 @@ class Dense(Layer):
 
         # ( (0 if i == self._inputsCount else 1) if (seed != None and math.isnan(seed)) else
         self.weights = [ [ (self.initializator.call(self, i, j))  for j in range(0, self._inputsCount + 1) ] for i in range(0, self._neuronsCount)] if weights is None else weights
+
+        print("Weights: ", self.weights)
 
         self.activation = activation
 

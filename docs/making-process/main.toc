@@ -1,0 +1,61 @@
+\contentsline {section}{\numberline {1}Introduction}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Project Motivation}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Key Design Principles}{2}{subsection.1.2}%
+\contentsline {section}{\numberline {2}Project Architecture}{2}{section.2}%
+\contentsline {subsection}{\numberline {2.1}High-Level Structure}{2}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}Module Description}{2}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Functions Module}{2}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Layers Module}{3}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Models Module}{3}{subsubsection.2.2.3}%
+\contentsline {subsubsection}{\numberline {2.2.4}Datasets Module}{3}{subsubsection.2.2.4}%
+\contentsline {section}{\numberline {3}Mathematical Foundations}{3}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Forward Propagation}{3}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Backpropagation}{4}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Gradient Descent Update}{4}{subsection.3.3}%
+\contentsline {subsection}{\numberline {3.4}Convolutional Operations}{4}{subsection.3.4}%
+\contentsline {section}{\numberline {4}Core Components Implementation}{4}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Function Base Class}{4}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Dense Layer Implementation}{5}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}Sequential Model}{5}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Gradient Verification}{6}{section.5}%
+\contentsline {subsection}{\numberline {5.1}Numerical Gradient Approximation}{6}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}Relative Error Metric}{6}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}Gradient Checking Workflow}{6}{subsection.5.3}%
+\contentsline {section}{\numberline {6}Build Process and Setup}{6}{section.6}%
+\contentsline {subsection}{\numberline {6.1}System Requirements}{6}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}Installation Steps}{7}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}Testing Framework}{7}{subsection.6.3}%
+\contentsline {subsection}{\numberline {6.4}Basic Usage Example}{8}{subsection.6.4}%
+\contentsline {section}{\numberline {7}Project Evolution}{8}{section.7}%
+\contentsline {subsection}{\numberline {7.1}Development Timeline}{8}{subsection.7.1}%
+\contentsline {subsubsection}{\numberline {7.1.1}Phase 1: Foundation (Basic Functions)}{8}{subsubsection.7.1.1}%
+\contentsline {subsubsection}{\numberline {7.1.2}Phase 2: Neural Network Layers}{9}{subsubsection.7.1.2}%
+\contentsline {subsubsection}{\numberline {7.1.3}Phase 3: Training Infrastructure}{9}{subsubsection.7.1.3}%
+\contentsline {subsubsection}{\numberline {7.1.4}Phase 4: Optimization Algorithms}{9}{subsubsection.7.1.4}%
+\contentsline {subsubsection}{\numberline {7.1.5}Phase 5: Convolutional Neural Networks}{10}{subsubsection.7.1.5}%
+\contentsline {subsubsection}{\numberline {7.1.6}Phase 6: Verification and Testing}{10}{subsubsection.7.1.6}%
+\contentsline {subsection}{\numberline {7.2}Architecture Evolution}{10}{subsection.7.2}%
+\contentsline {section}{\numberline {8}Key Features and Innovations}{10}{section.8}%
+\contentsline {subsection}{\numberline {8.1}Modular Design}{10}{subsection.8.1}%
+\contentsline {subsection}{\numberline {8.2}Extensibility}{11}{subsection.8.2}%
+\contentsline {subsection}{\numberline {8.3}Gradient Verification System}{11}{subsection.8.3}%
+\contentsline {subsection}{\numberline {8.4}Initialization Strategies}{11}{subsection.8.4}%
+\contentsline {section}{\numberline {9}Network Architectures}{11}{section.9}%
+\contentsline {subsection}{\numberline {9.1}Fully Connected Network}{11}{subsection.9.1}%
+\contentsline {subsection}{\numberline {9.2}Convolutional Network}{11}{subsection.9.2}%
+\contentsline {section}{\numberline {10}Performance Considerations}{11}{section.10}%
+\contentsline {subsection}{\numberline {10.1}Computational Complexity}{11}{subsection.10.1}%
+\contentsline {subsection}{\numberline {10.2}Optimization Opportunities}{12}{subsection.10.2}%
+\contentsline {section}{\numberline {11}Practical Applications}{12}{section.11}%
+\contentsline {subsection}{\numberline {11.1}Example: XOR Problem}{12}{subsection.11.1}%
+\contentsline {subsection}{\numberline {11.2}Example: Image Classification}{13}{subsection.11.2}%
+\contentsline {section}{\numberline {12}Lessons Learned}{13}{section.12}%
+\contentsline {subsection}{\numberline {12.1}Technical Insights}{13}{subsection.12.1}%
+\contentsline {subsection}{\numberline {12.2}Software Engineering}{13}{subsection.12.2}%
+\contentsline {section}{\numberline {13}Future Directions}{14}{section.13}%
+\contentsline {section}{\numberline {14}Conclusion}{14}{section.14}%
+\contentsline {section}{\numberline {15}References}{14}{section.15}%
+\contentsline {section}{\numberline {A}Code Repository Structure}{15}{appendix.A}%
+\contentsline {section}{\numberline {B}Testing Guide}{16}{appendix.B}%
+\contentsline {subsection}{\numberline {B.1}Running Tests}{16}{subsection.B.1}%
+\contentsline {subsection}{\numberline {B.2}Test Categories}{16}{subsection.B.2}%

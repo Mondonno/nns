@@ -119,6 +119,7 @@ class Sequential(Model):
                         layerWeightsDerivativesVector, nextLayerErrorDerivatives = currentLayer.backwardPass(previousLayerOutputs, currentLayerErrorDerivatives)
                         currentLayerErrorDerivatives = nextLayerErrorDerivatives
 
+                        # it is append at the beggining 
                         weightsDerivativesVector[:0] = (layerWeightsDerivativesVector)
                         # activationDerivativesForNeurons[currentLayerIndex] = self.layers[currentLayerIndex].derivatives(layerOutputs[i])
                     
