@@ -56,8 +56,8 @@
 }
 
 \title{\textbf{Neural Networks from Scratch}\\
-\Large A Comprehensive Educational Deep Learning Framework}
-\author{Implementation Documentation}
+\Large A Comprehensive Deep Learning Framework Made From Scratch in Python}
+\author{\url{https://github.com/Mondonno/} (Mikolaj Mocek)}
 \date{\today}
 
 \begin{document}
@@ -79,7 +79,7 @@
 \vspace{0.5cm}
 
 \begin{abstract}
-This document presents a comprehensive implementation of neural networks built entirely from scratch in Python. The project provides a modular, extensible framework for understanding the mathematical foundations and algorithmic details of deep learning, including automatic differentiation through backpropagation, convolutional neural networks, various optimization algorithms, and rigorous gradient verification. This implementation prioritizes educational clarity and mathematical rigor over computational efficiency, making it ideal for research, education, and gaining deep insights into neural network internals.
+This document presents a comprehensive implementation of neural networks built entirely from scratch in Python. The project provides a modular, extensible framework for understanding the mathematical foundations and algorithmic details of deep learning, including automatic differentiation through backpropagation, various optimization algorithms, and rigorous gradient verification. This implementation prioritizes educational clarity and mathematical rigor over computational efficiency, making it ideal for research, education, and gaining deep insights into neural network internals.
 \end{abstract}
 
 \tableofcontents
@@ -88,7 +88,7 @@ This document presents a comprehensive implementation of neural networks built e
 %==============================================================================
 \section{Introduction}
 
-Neural networks have revolutionized machine learning and artificial intelligence, yet their inner workings often remain obscured by high-level frameworks. This project implements neural networks from first principles without relying on external deep learning libraries such as TensorFlow or PyTorch. By building every component from the ground up—from basic activation functions to complex convolutional layers—this framework reveals the mathematical elegance and computational challenges underlying modern deep learning systems.
+Neural networks have revolutionized machine learning and artificial intelligence, yet their inner workings often remain obscured by high-level frameworks. This project implements neural networks from first principles without relying on external deep learning libraries such as TensorFlow or PyTorch. By building every component from the ground up—from basic activation functions to complex layers—this framework reveals the mathematical elegance and computational challenges underlying modern deep learning systems.
 
 \subsection{Project Motivation}
 
@@ -163,9 +163,6 @@ Implements mathematical operations including:
 Neural network building blocks:
 \begin{itemize}
     \item \textbf{Dense}: Fully connected layers with configurable neurons
-    \item \textbf{Convolution2D}: 2D convolutional layers for spatial data
-    \item \textbf{MaxPool2D}: Max pooling for dimensionality reduction
-    \item \textbf{Flatten}: Reshaping between convolutional and dense layers
 \end{itemize}
 
 \subsubsection{Models Module}
@@ -223,23 +220,6 @@ Weights are updated using the computed gradients:
 \end{equation}
 
 where $\alpha$ is the learning rate.
-
-\subsection{Convolutional Operations}
-
-For a 2D convolution with kernel $\mathbf{K}$ and input $\mathbf{X}$:
-
-\begin{equation}
-(\mathbf{X} * \mathbf{K})_{i,j} = \sum_{m=0}^{M-1} \sum_{n=0}^{N-1} \mathbf{X}_{i+m,j+n} \cdot \mathbf{K}_{m,n}
-\end{equation}
-
-The output dimensions are:
-
-\begin{equation}
-H_{out} = \left\lfloor \frac{H_{in} + 2P - K_h}{S} + 1 \right\rfloor, \quad
-W_{out} = \left\lfloor \frac{W_{in} + 2P - K_w}{S} + 1 \right\rfloor
-\end{equation}
-
-where $P$ is padding and $S$ is stride.
 
 %==============================================================================
 \section{Core Components Implementation}
@@ -343,10 +323,10 @@ To compare analytical and numerical gradients:
 \begin{tabular}{@{}ll@{}}
 \toprule
 \textbf{Relative Error} & \textbf{Assessment} \\ \midrule
-$< 10^{-7}$ & Excellent ✓ \\
-$< 10^{-5}$ & Good ✓ \\
+$< 10^{-7}$ & Excellent \checkmark \\
+$< 10^{-5}$ & Good \checkmark \\
 $< 10^{-3}$ & Acceptable \\
-$> 10^{-3}$ & Likely bug ✗ \\ \bottomrule
+$> 10^{-3}$ & Likely bug $\times$ \\ \bottomrule
 \end{tabular}
 \end{table}
 
@@ -364,8 +344,8 @@ $> 10^{-3}$ & Likely bug ✗ \\ \bottomrule
 \node[box, below of=compute] (numerical) {Compute Numerical Gradient};
 \node[box, below of=numerical] (compare) {Calculate Relative Error};
 \node[decision, below of=compare] (check) {Error $< 10^{-5}$?};
-\node[box, below of=check, yshift=-0.5cm, xshift=-3cm] (pass) {Pass ✓};
-\node[box, below of=check, yshift=-0.5cm, xshift=3cm] (fail) {Fail ✗};
+\node[box, below of=check, yshift=-0.5cm, xshift=-3cm] (pass) {Pass \checkmark};
+\node[box, below of=check, yshift=-0.5cm, xshift=3cm] (fail) {Fail $\times$};
 
 \draw[arrow] (compute) -- (numerical);
 \draw[arrow] (numerical) -- (compare);
@@ -466,14 +446,12 @@ The project evolved through several major phases, each adding significant functi
 \node[phase] (p2) at (3.5,0) {\textbf{Phase 2}\\Dense Layers};
 \node[phase] (p3) at (7,0) {\textbf{Phase 3}\\Training Loop};
 \node[phase] (p4) at (0,-3) {\textbf{Phase 4}\\Optimizers};
-\node[phase] (p5) at (3.5,-3) {\textbf{Phase 5}\\Conv Layers};
-\node[phase] (p6) at (7,-3) {\textbf{Phase 6}\\Verification};
+\node[phase] (p5) at (7,-3) {\textbf{Phase 5}\\Verification};
 
 \draw[arrow] (p1) -- (p2);
 \draw[arrow] (p2) -- (p3);
 \draw[arrow] (p3) -- (p4);
 \draw[arrow] (p4) -- (p5);
-\draw[arrow] (p5) -- (p6);
 
 \end{tikzpicture}
 \caption{Project development phases}
@@ -527,19 +505,7 @@ Enhanced training with advanced optimizers:
 
 \textbf{Key Challenge}: Maintaining optimizer state across training iterations.
 
-\subsubsection{Phase 5: Convolutional Neural Networks}
-
-Extended to handle spatial data:
-\begin{itemize}
-    \item 2D convolution operations
-    \item Convolutional layers with kernels
-    \item Max pooling layers
-    \item Flatten layers for dimensionality transitions
-\end{itemize}
-
-\textbf{Key Challenge}: Implementing efficient convolution operations and computing gradients for convolutional layers.
-
-\subsubsection{Phase 6: Verification and Testing}
+\subsubsection{Phase 5: Verification and Testing}
 
 Critical quality assurance phase:
 \begin{itemize}
@@ -558,7 +524,7 @@ Critical quality assurance phase:
 \caption{Component count evolution}
 \begin{tabular}{@{}lcccc@{}}
 \toprule
-\textbf{Component} & \textbf{Phase 2} & \textbf{Phase 4} & \textbf{Phase 6} \\ \midrule
+\textbf{Component} & \textbf{Phase 2} & \textbf{Phase 4} & \textbf{Phase 5} \\ \midrule
 Functions & 3 & 5 & 7 \\
 Layers & 1 & 2 & 5 \\
 Optimizers & 0 & 3 & 3 \\
@@ -661,39 +627,6 @@ Support for multiple weight initialization methods:
 \caption{Fully connected neural network architecture (3-4-3-1)}
 \end{figure}
 
-\subsection{Convolutional Network}
-
-\begin{figure}[h]
-\centering
-\begin{tikzpicture}[
-    conv/.style={rectangle, draw, fill=red!20, minimum width=1.5cm, minimum height=2cm},
-    pool/.style={rectangle, draw, fill=green!20, minimum width=1.2cm, minimum height=1.5cm},
-    dense/.style={rectangle, draw, fill=blue!20, minimum width=1cm, minimum height=3cm},
-]
-
-\node[conv] (conv1) at (0,0) {Conv 3×3};
-\node[pool, right=0.5cm of conv1] (pool1) {MaxPool};
-\node[conv, right=0.5cm of pool1] (conv2) {Conv 3×3};
-\node[pool, right=0.5cm of conv2] (pool2) {MaxPool};
-\node[dense, right=0.5cm of pool2] (flatten) {Flatten};
-\node[dense, right=0.5cm of flatten] (fc) {Dense};
-
-\draw[->] (conv1) -- (pool1);
-\draw[->] (pool1) -- (conv2);
-\draw[->] (conv2) -- (pool2);
-\draw[->] (pool2) -- (flatten);
-\draw[->] (flatten) -- (fc);
-
-\node[below=0.2cm of conv1] {\scriptsize 28×28×1};
-\node[below=0.2cm of pool1] {\scriptsize 14×14×32};
-\node[below=0.2cm of conv2] {\scriptsize 14×14×32};
-\node[below=0.2cm of pool2] {\scriptsize 7×7×64};
-\node[below=0.2cm of fc] {\scriptsize 10};
-
-\end{tikzpicture}
-\caption{Convolutional neural network architecture for image classification}
-\end{figure}
-
 %==============================================================================
 \section{Performance Considerations}
 
@@ -705,13 +638,6 @@ For a dense layer with $n_{in}$ inputs and $n_{out}$ outputs:
     \item \textbf{Forward Pass}: $O(n_{in} \times n_{out})$ operations
     \item \textbf{Backward Pass}: $O(n_{in} \times n_{out})$ operations
     \item \textbf{Memory}: $O(n_{in} \times n_{out})$ for weights
-\end{itemize}
-
-For a convolutional layer with kernel size $k \times k$, $C_{in}$ input channels, and $C_{out}$ output channels:
-
-\begin{itemize}
-    \item \textbf{Forward Pass}: $O(k^2 \times C_{in} \times C_{out} \times H_{out} \times W_{out})$
-    \item \textbf{Memory}: $O(k^2 \times C_{in} \times C_{out})$ for kernels
 \end{itemize}
 
 \subsection{Optimization Opportunities}
@@ -752,21 +678,6 @@ model = Sequential([
 model.fit(dataset, epochs=1000)
 \end{lstlisting}
 
-\subsection{Example: Image Classification}
-
-Using convolutional layers for image data:
-
-\begin{lstlisting}[caption={CNN for image classification}]
-model = Sequential([
-    Convolution2D(out_channels=32, kernel_size=(3,3)),
-    MaxPool2D(pool_size=(2,2)),
-    Convolution2D(out_channels=64, kernel_size=(3,3)),
-    MaxPool2D(pool_size=(2,2)),
-    Flatten(),
-    Dense(128, 10, RectifiedLinearFunction())
-], MSEFunction(), learning_rate)
-\end{lstlisting}
-
 %==============================================================================
 \section{Lessons Learned}
 
@@ -794,6 +705,7 @@ model = Sequential([
 Potential extensions to the framework:
 
 \begin{itemize}
+    \item \textbf{Convolutional Neural Networks}: 2D convolution operations and layers (currently in development)
     \item \textbf{Recurrent Neural Networks}: LSTM and GRU layers
     \item \textbf{Attention Mechanisms}: Self-attention and transformer blocks
     \item \textbf{Batch Normalization}: Improve training stability
@@ -811,18 +723,8 @@ This project demonstrates that building neural networks from scratch is not only
 
 The modular architecture ensures that the framework is extensible and maintainable, while the comprehensive test suite and gradient verification provide confidence in the correctness of the implementation. Although not optimized for production use, this framework serves its primary purpose: enabling deep understanding of neural network internals.
 
-The evolution of the project, from simple functions to complete convolutional networks, mirrors the historical development of deep learning itself, making it an ideal educational tool for anyone seeking to understand how modern AI systems work at a fundamental level.
+The evolution of the project, from simple functions to complete neural networks, mirrors the historical development of deep learning itself, making it an ideal educational tool for anyone seeking to understand how modern AI systems work at a fundamental level.
 
-%==============================================================================
-\section{References}
-
-\begin{enumerate}
-    \item Goodfellow, I., Bengio, Y., \& Courville, A. (2016). \textit{Deep Learning}. MIT Press.
-    \item Nielsen, M. (2015). \textit{Neural Networks and Deep Learning}. Determination Press.
-    \item Rumelhart, D. E., Hinton, G. E., \& Williams, R. J. (1986). Learning representations by back-propagating errors. \textit{Nature}, 323(6088), 533-536.
-    \item LeCun, Y., Bottou, L., Bengio, Y., \& Haffner, P. (1998). Gradient-based learning applied to document recognition. \textit{Proceedings of the IEEE}, 86(11), 2278-2324.
-    \item He, K., Zhang, X., Ren, S., \& Sun, J. (2015). Delving deep into rectifiers: Surpassing human-level performance on ImageNet classification. \textit{ICCV}.
-\end{enumerate}
 
 %==============================================================================
 \appendix
@@ -833,63 +735,63 @@ Complete directory tree of the project:
 
 \begin{verbatim}
 nns/
-├── LICENSE
-├── README.md
-├── requirements.txt
-├── pytest.ini
-├── main.tex                    # This document
-├── core/                       # Core framework
-│   ├── __init__.py
-│   ├── dict.py
-│   ├── gradient_check.py       # Gradient verification
-│   ├── test_gradient_check.py
-│   ├── functions/              # Activation and loss functions
-│   │   ├── __init__.py
-│   │   ├── function.py         # Base class
-│   │   ├── linear.py
-│   │   ├── relu.py
-│   │   ├── sine.py
-│   │   ├── mse.py
-│   │   └── convolute.py
-│   ├── layers/                 # Neural network layers
-│   │   ├── __init__.py
-│   │   ├── layer.py            # Base class
-│   │   ├── dense.py            # Fully connected
-│   │   ├── convolution2d.py    # Convolutional
-│   │   ├── maxpool2d.py        # Max pooling
-│   │   ├── flatten.py          # Reshaping
-│   │   ├── test_dense.py
-│   │   ├── test_convolution2d.py
-│   │   └── initializators/     # Weight initialization
-│   │       ├── function.py
-│   │       └── xavier.py
-│   ├── models/                 # Model architectures
-│   │   ├── __init__.py
-│   │   ├── model.py            # Base class
-│   │   ├── sequential.py       # Sequential model
-│   │   └── optimizers/         # Optimization algorithms
-│   │       ├── __init__.py
-│   │       ├── function.py
-│   │       ├── momentum.py
-│   │       ├── nag.py
-│   │       └── clipping.py
-│   └── datasets/               # Data handling
-│       ├── __init__.py
-│       ├── dataset.py
-│       ├── file_dataset.py
-│       ├── image_dataset.py
-│       └── transforms/
-│           └── min_max.py
-├── nns/                        # Applications
-│   ├── main.py
-│   ├── conv2d.py
-│   └── playground.py
-├── perceptron/                 # Simple examples
-│   └── main.py
-└── docs/                       # Documentation
-    ├── ivus/
-    ├── medium/
-    └── quarkml/
+|---- LICENSE
+|---- README.md
+|---- requirements.txt
+|---- pytest.ini
+|---- main.tex                    # This document
+|---- core/                       # Core framework
+|   |---- __init__.py
+|   |---- dict.py
+|   |---- gradient_check.py       # Gradient verification
+|   |---- test_gradient_check.py
+|   |---- functions/              # Activation and loss functions
+|   |   |---- __init__.py
+|   |   |---- function.py         # Base class
+|   |   |---- linear.py
+|   |   |---- relu.py
+|   |   |---- sine.py
+|   |   |---- mse.py
+|   |   `---- convolute.py
+|   |---- layers/                 # Neural network layers
+|   |   |---- __init__.py
+|   |   |---- layer.py            # Base class
+|   |   |---- dense.py            # Fully connected
+|   |   |---- convolution2d.py    # Convolutional
+|   |   |---- maxpool2d.py        # Max pooling
+|   |   |---- flatten.py          # Reshaping
+|   |   |---- test_dense.py
+|   |   |---- test_convolution2d.py
+|   |   `---- initializators/     # Weight initialization
+|   |       |---- function.py
+|   |       `---- xavier.py
+|   |---- models/                 # Model architectures
+|   |   |---- __init__.py
+|   |   |---- model.py            # Base class
+|   |   |---- sequential.py       # Sequential model
+|   |   `---- optimizers/         # Optimization algorithms
+|   |       |---- __init__.py
+|   |       |---- function.py
+|   |       |---- momentum.py
+|   |       |---- nag.py
+|   |       `---- clipping.py
+|   `---- datasets/               # Data handling
+|       |---- __init__.py
+|       |---- dataset.py
+|       |---- file_dataset.py
+|       |---- image_dataset.py
+|       `---- transforms/
+|           `---- min_max.py
+|---- nns/                        # Applications
+|   |---- main.py
+|   |---- conv2d.py
+|   `---- playground.py
+|---- perceptron/                 # Simple examples
+|   `---- main.py
+`---- docs/                       # Documentation
+    |---- ivus/
+    |---- medium/
+    `---- quarkml/
 \end{verbatim}
 
 \section{Testing Guide}
@@ -927,7 +829,6 @@ The test suite includes:
 \vspace{1cm}
 \begin{center}
 \rule{0.9\textwidth}{0.4pt}\\[0.3cm]
-\textit{This document and the associated codebase represent a comprehensive educational resource for understanding neural networks from first principles. All code is available under the MIT License.}\\[0.2cm]
 \textbf{Repository:} \href{https://github.com/Mondonno/nns}{\texttt{github.com/Mondonno/nns}}
 \end{center}
 
