@@ -5,6 +5,8 @@ __pycache__
 */*/*/__pycache__
 */*/*/*/__pycache__
 
+docs/making-process/build
+
 *.aux
 *.lof
 *.lot
