@@ -5,6 +5,7 @@ import random
 class Convolution2D(Layer):
     def __init__(self, out_channels, kernel_size=(3, 3), stride=(1, 1), dilation=(1, 1), padding=(0, 0), seed=None):
         super().__init__()
+
         self.out_channels = out_channels
         self.kernel_size = kernel_size
         self.stride = stride
@@ -18,7 +19,6 @@ class Convolution2D(Layer):
             
         randomInstance = random.Random(self.seed)
 
-        # Randomly initialize kernels for each output channel using randomInstance
         self.kernels = [
             [[randomInstance.uniform(-0.1, 0.1) for _ in range(self.kernel_size[1])] for _ in range(self.kernel_size[0])]
             for _ in range(self.out_channels)
@@ -135,7 +135,6 @@ class Convolution2D(Layer):
             nextLayerErrorDerivatives = gradientsWrtInputs
         else:
             kernel_flat = self.weights[0][:-1]
-            bias = self.weights[0][-1]
             input_shape = (len(previousLayerOutputs), len(previousLayerOutputs[0]) if len(previousLayerOutputs) > 0 else 1)
             kernel = reconstruct_kernel(kernel_flat, input_shape)
 
