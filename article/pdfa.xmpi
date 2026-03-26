@@ -1,4 +1,4 @@
-<?xpacket begin='ï»¾' id='W5M0MpCehiHzreSzNTczkc9d' ?> 
+<?xpacket begin='﻾' id='W5M0MpCehiHzreSzNTczkc9d' ?> 
 
 <x:xmpmeta xmlns:x="adobe:ns:meta/" x:xmptk="Adobe XMP Core 4.0-c316 44.253921, Sun Oct 01 2006 17:14:39"> 
  <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"> 
@@ -64,7 +64,7 @@
    </pdfaExtension:schemas> 
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:pdf="http://ns.adobe.com/pdf/1.3/"> 
-   <pdf:Producer>LuaTeX</pdf:Producer> 
+   <pdf:Producer>pdfTeX</pdf:Producer> 
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/"> 
    <dc:format>application/pdf</dc:format> 
@@ -92,9 +92,9 @@
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmp="http://ns.adobe.com/xap/1.0/"> 
    <xmp:CreatorTool>LaTeX with hyperref</xmp:CreatorTool> 
-   <xmp:ModifyDate>2026-03-26T18:27:26+01:00</xmp:ModifyDate> 
-   <xmp:CreateDate>2026-03-26T18:27:26+01:00</xmp:CreateDate> 
-   <xmp:MetadataDate>2026-03-26T18:27:26+01:00</xmp:MetadataDate> 
+   <xmp:ModifyDate>2026-03-26T19:01:20+01:00</xmp:ModifyDate> 
+   <xmp:CreateDate>2026-03-26T19:01:20+01:00</xmp:CreateDate> 
+   <xmp:MetadataDate>2026-03-26T19:01:20+01:00</xmp:MetadataDate> 
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmpRights = "http://ns.adobe.com/xap/1.0/rights/"> 
    <xmpRights:Marked>True</xmpRights:Marked>
@@ -103,7 +103,7 @@
   </rdf:Description> 
   <rdf:Description rdf:about="" xmlns:xmpMM="http://ns.adobe.com/xap/1.0/mm/"> 
    <xmpMM:DocumentID>uuid:DF005B57-2A06-8753-7167-92D8CE935460</xmpMM:DocumentID> 
-   <xmpMM:InstanceID>uuid:02C06984-A092-AF2E-2435-081E993C1E9A</xmpMM:InstanceID> 
+   <xmpMM:InstanceID>uuid:AD88F307-D505-0C4F-E10C-C7508C9BAF7E</xmpMM:InstanceID> 
   </rdf:Description> 
  </rdf:RDF> 
 </x:xmpmeta> 
