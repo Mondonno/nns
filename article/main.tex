@@ -1,0 +1,147 @@
+\documentclass[]{ceurart}
+\sloppy
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{float}
+\lstset{breaklines=true}
+
+\begin{document}
+
+\copyrightyear{2025}
+
+\copyrightclause{Copyright for this paper by its authors.}
+
+\conference{IVUS 2025: International Conference Information Society and University Studies, 2025}
+
+\title{A Pure Python Neural Network Library for Educational and Research Purposes: Architecture, Implementation, and MNIST Case Study}
+
+\author[1]{Miko{\l}aj Mocek}[email=mikolaj.mocek@icloud.com]
+\address[1]{Politechnika {\'S}l{\k a}ska, Gliwice, Poland}
+
+\begin{abstract}
+This paper presents a neural network library implemented from scratch in pure Python and intended primarily for education, experimentation, and lightweight research prototyping. The project exposes the internal structure of model definition, forward propagation, backpropagation, and weight updates, while still supporting practical components such as dense layers, convolution, pooling, flattening, serialization, and dataset abstractions. The implementation is validated on the MNIST handwritten digit dataset. In addition to describing the software architecture, the paper documents a new parser for the official IDX image and label formats, a lightweight convolutional experiment, and a discussion of the current limitations of the framework. The resulting system is not positioned as a high-performance alternative to industrial frameworks, but rather as a transparent environment for understanding how neural networks operate internally.
+\end{abstract}
+
+\begin{keywords}
+neural networks \sep pure Python \sep deep learning \sep MNIST \sep educational software \sep convolutional neural networks
+\end{keywords}
+
+\maketitle
+
+\section{Introduction}
+Deep learning systems are now embedded in a broad spectrum of technical and scientific workflows, from image classification and medical signal interpretation to speech interfaces, recommendation engines, and document understanding. Their practical success is strongly connected with the availability of mature software ecosystems. Frameworks such as TensorFlow~\cite{tensorflow} and PyTorch~\cite{pytorch} allow researchers to assemble sophisticated models with relatively little code, while high-level APIs such as Keras simplify rapid prototyping and classroom demonstrations. At the same time, this convenience creates a well-known educational problem: when most of the important operations are hidden inside highly optimized kernels, students often learn to \emph{use} neural networks before they learn to \emph{reason about} them. A model may converge, diverge, or silently produce poor predictions without the learner fully understanding which part of the computation graph or training loop is responsible.
+
+This issue is especially visible when introducing the mathematical core of neural computation. A multilayer perceptron depends on the interplay between affine transformations, nonlinear activation functions, and gradient propagation~\cite{rumelhart1986,cybenko1989,glorot2010}. Convolutional neural networks (CNNs) extend this idea by learning local spatial filters and hierarchical feature maps that are particularly useful in vision tasks~\cite{lecun1998,krizhevsky2012,vgg,googlenet,resnet}. Recurrent neural networks and Long Short-Term Memory networks address temporal dependencies by explicitly modeling sequential state updates~\cite{hochreiter1997}, whereas transformer architectures replace recurrence with attention and have become a dominant paradigm for language and multimodal processing~\cite{vaswani2017}. These architectural families differ not only in topology but also in the shape of tensors they process, the training instabilities they exhibit, and the regularization or initialization strategies they require. Techniques such as Xavier initialization~\cite{glorot2010}, adaptive optimization with Adam~\cite{kingma2015}, batch normalization~\cite{ioffe2015}, and rectifier-aware initialization~\cite{he2015} were introduced precisely because training deep models is not a trivial extension of shallow learning.
+
+For this reason, low-level educational implementations remain useful even in the presence of industrial-grade libraries. A pure Python codebase offers three advantages. First, it makes the computation path auditable: a student can inspect how weights are stored, how batches are generated, and how each derivative is propagated across layers. Second, it provides a controlled environment for experimentation. When a developer writes a new convolutional layer, data parser, or optimizer manually, correctness issues become immediately visible and can be checked against the expected tensor shapes and numerical values. Third, such a codebase creates a bridge between theory and production software. Concepts introduced abstractly in textbooks, such as filter banks, pooling operators, or the chain rule, become concrete when represented as ordinary Python classes and lists.
+
+The library presented in this paper was designed in exactly this spirit. Its goal is not to compete with optimized tensor runtimes, but to support transparent study of neural-network internals and to serve as a minimal research sandbox. The implemented modules cover dense layers, activation and loss functions, 2D convolution, max pooling, flattening, serialization, and dataset abstractions. During the work reported here, the project was extended with an explicit parser for MNIST binary IDX files, compatibility improvements in the convolution and pooling stack, and an executable CNN experiment using the architecture ``Conv2D $\rightarrow$ Conv2D $\rightarrow$ MaxPool $\rightarrow$ Flatten $\rightarrow$ Dense(10)''. The paper therefore makes two contributions. The first is software-oriented: it documents the organization of a small but extensible pure Python framework. The second is empirical: it demonstrates that the framework can load MNIST-compatible data, execute convolutional training end to end, and produce reproducible figures for analysis, even if the current implementation is still far from the accuracy and efficiency of established frameworks.
+
+\section{Dataset}
+The study is based on the MNIST dataset of handwritten digits~\cite{lecun1998}. The original dataset contains 70,000 grayscale images of size $28 \times 28$, divided into 60,000 training samples and 10,000 test samples. Each example belongs to one of ten classes representing digits from 0 to 9. In the official distribution, images are stored in the binary \texttt{idx3-ubyte} format, while labels are stored in \texttt{idx1-ubyte}. To support direct use of the original benchmark, the library now includes a dedicated \texttt{MnistDataset} class and low-level parsers for both binary formats. The implementation validates magic numbers, decodes image headers, reconstructs 2D pixel matrices, and supports one-hot encoding of labels.
+
+Two practical data-access modes are supported. In eager mode, all decoded images are loaded into memory as Python lists. In lazy mode, only metadata and labels are retained, while individual images are read on demand during batch generation. This design reduces unnecessary RAM pressure and is more appropriate for an educational pure Python framework, where the cost of duplicating large nested lists is relatively high. The dataset layer therefore serves both a pedagogical role and a software-engineering role: it shows how binary formats can be parsed manually and how a training loop can be decoupled from storage details.
+
+The repository snapshot used for the experiment documented in this draft did not include raw IDX files, but it did include a PNG conversion of MNIST. For that reason, the executed convolutional sanity-check used a balanced subset of the PNG version derived from the same benchmark content: 80 training samples and 40 test samples, with class-balanced sampling. The important point is that the library now supports the official binary format directly, while the figures and metrics shown below were produced from the locally available PNG representation of the same handwritten-digit domain. All images were normalized to the $[0,1]$ range before training.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.92\linewidth]{figures/mnist_dataset_samples.png}
+    \caption{Representative MNIST samples used in the experiment, one image per digit class.}
+    \label{fig:mnist-samples}
+\end{figure}
+
+\section{Proposed Solution}
+The proposed solution is a modular pure Python library that keeps the computational path explicit and easy to inspect. The framework provides the following core capabilities:
+\begin{itemize}
+    \item explicit dataset abstractions, including batching, shuffling, and lazy loading,
+    \item dense, convolutional, pooling, and flatten layers,
+    \item pluggable activation, loss, and learning-rate functions,
+    \item a sequential training model with forward and backward propagation,
+    \item serialization helpers for saving model states, and
+    \item experiment scripts that generate evaluation figures directly from the repository.
+\end{itemize}
+
+\section{Library Design and Implementation}
+\subsection{Dataset Handling and IDX Parsing}
+The base \texttt{Dataset} abstraction stores inputs, outputs, batch size, and randomization state. During this work, its shuffling procedure was corrected so that batches follow the actual randomized index order rather than the original sequence. The new \texttt{MnistDataset} specialization extends this logic with direct support for \texttt{idx3-ubyte} and \texttt{idx1-ubyte}. The parser reads the binary header using \texttt{struct.unpack}, verifies the expected MNIST magic numbers, reconstructs each image row by row, and optionally normalizes pixel values. The lazy variant reads image bytes only when the batch generator requests them, which avoids eagerly duplicating the full dataset in memory.
+
+Example usage of the parser is shown below:
+\begin{lstlisting}[language=Python]
+from nns.core.datasets.mnist_dataset import MnistDataset
+
+train_dataset = MnistDataset(
+    imagesFilePath="train-images-idx3-ubyte",
+    labelsFilePath="train-labels-idx1-ubyte",
+    batchSize=32,
+    normalize=True,
+    oneHot=True,
+    lazy=True
+)
+\end{lstlisting}
+
+\subsection{Layer Abstraction}
+All trainable and non-trainable operations are represented as Python layer classes. The library currently includes \texttt{Dense}, \texttt{Convolution2D}, \texttt{MaxPooling2D}, and \texttt{Flatten}. The \texttt{Convolution2D} layer was updated to support both legacy fixed-kernel tests and trainable multi-channel kernels. It now handles single-channel matrices, multi-channel feature maps, and batched inputs more consistently. The pooling layer stores max indices from the forward pass so that gradients can be routed back only through the winning locations during backpropagation. The flatten layer records the input shape and reconstructs it during the backward pass.
+
+\subsection{Functions, Initialization, and Training}
+Activation functions and losses are implemented as explicit classes with \texttt{call} and \texttt{derivative} methods. In the current experiment, the final dense classifier uses a linear activation and mean squared error. This is not an optimal objective for digit classification, but it matches the intentionally simple structure of the framework. Xavier initialization~\cite{glorot2010} is used for dense weights, while convolution kernels are initialized from small uniform values. The training loop is coordinated by the \texttt{Sequential} model, which propagates values forward through the layer stack and then walks backward through the same stack to accumulate gradients and update trainable parameters.
+
+\subsection{Convolutional Experiment}
+To validate the convolution path requested in this stage of the project, a dedicated non-interactive script was added. The script trains a compact CNN with two convolutional layers, one max-pooling layer, one flatten operation, and a dense output layer with ten neurons:
+\begin{lstlisting}[language=Python]
+model = Sequential([
+    Convolution2D(out_channels=2, kernel_size=(3, 3), seed=1),
+    Convolution2D(out_channels=2, kernel_size=(3, 3), seed=2),
+    MaxPooling2D(poolSize=(2, 2)),
+    Flatten(),
+    Dense(288, 10, LinearFunction(), seed=3),
+], MSEFunction(), ExperimentLearningRateFunction())
+\end{lstlisting}
+
+This experiment is intentionally small because the implementation prioritizes transparency over numerical performance. The goal of the run was to verify the correctness of data loading, tensor-shape transitions, convolutional forward and backward passes, and figure generation.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/mnist_network_architecture.png}
+    \caption{CNN architecture used for the MNIST sanity-check experiment.}
+    \label{fig:network-structure}
+\end{figure}
+
+\section{Results}
+The executed experiment used 80 training samples and 40 test samples from the local MNIST PNG mirror, with four epochs of training. The purpose of this run was not to maximize accuracy, but to validate that the newly integrated convolution layer, pooling path, dataset loading, and metrics/figure generation operate end to end without manual intervention.
+
+Figure~\ref{fig:training-curves} shows the evolution of training loss and test accuracy across epochs. The final training loss reached 0.0903. Final training accuracy was 7.5\%, and final test accuracy was 2.5\%. These values are obviously far below the performance expected from mature CNN implementations on MNIST. However, they still provide a useful engineering result: the library successfully performed convolutional training on real image data, and the current optimization limitations became measurable rather than theoretical.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\linewidth]{figures/mnist_training_curves.png}
+    \caption{Training loss and test accuracy as functions of epoch for the pure Python CNN run.}
+    \label{fig:training-curves}
+\end{figure}
+
+The confusion matrix in Figure~\ref{fig:confusion-matrix} confirms that the present model configuration does not yet separate digit classes reliably. This outcome is consistent with the simplified optimization stack, the very small training subset, and the use of a linear output layer with mean squared error instead of a more appropriate softmax-cross-entropy pipeline. The low score should therefore be interpreted as a baseline validation of software functionality, not as a competitive benchmark.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.72\linewidth]{figures/mnist_confusion_matrix.png}
+    \caption{Confusion matrix for the MNIST test subset used in the experiment.}
+    \label{fig:confusion-matrix}
+\end{figure}
+
+\section{Discussion}
+The main outcome of the work is software validation rather than state-of-the-art recognition quality. From an implementation perspective, the project now supports the official MNIST binary formats, exposes a lazy loading path that is more RAM-friendly than eagerly duplicating the dataset, and runs a complete convolutional experiment that generates reproducible visual artifacts. These are meaningful improvements over an earlier draft state with an unfinished parser and missing figures.
+
+At the same time, the empirical results make the current limitations explicit. The optimizer and loss setup are still rudimentary, the experiment uses a very small balanced subset because of pure Python execution cost, and the library lacks conveniences commonly found in modern deep-learning stacks, such as softmax output, cross-entropy loss, vectorized tensor kernels, and hardware acceleration. Future work should therefore focus on classification-oriented losses, better numerical stabilization, richer logging, and experiments on the full IDX dataset rather than a small PNG subset. Such improvements would make the library a stronger educational platform and a more convincing research demonstrator.
+
+\section{Conclusion}
+This paper documented a pure Python neural network library whose primary value lies in transparency, inspectability, and extensibility. The project was extended with an MNIST IDX parser, corrected dataset shuffling, improved convolutional compatibility, and a working CNN experiment on handwritten digits. Although the current convolutional benchmark remains far from production-level accuracy, the implementation now provides a concrete and reproducible foundation for further work on optimization, dataset scaling, and experimental methodology. For educational use, this explicit implementation remains valuable precisely because it reveals the details that optimized frameworks intentionally hide.
+
+\begin{acknowledgments}
+The author thanks the project mentor for feedback on the experimental scope, publication requirements, and draft preparation process.
+\end{acknowledgments}
+
+\bibliography{references}
+
+\end{document}
