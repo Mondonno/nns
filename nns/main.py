@@ -48,10 +48,6 @@ class StaticSineLayer(Dense):
         super().__init__(1, 1, SineFunction(), seed=10, initializator=None, weights=[[1, 0]])
         # n n_w n_b i -> i * 
 
-mnistModel = Sequential([
-    Convolution2D
-])
-
 model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),
     # Dense(1, 1, LinearFunction(), seed = None),

@@ -1,3 +1,4 @@
+from .activation import ActivationLayer
 from .convolution2d import Convolution2D
 from .dense import Dense
 from .flatten import Flatten

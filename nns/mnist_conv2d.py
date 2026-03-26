@@ -7,29 +7,42 @@ from PIL import Image
 
 from nns.core.datasets.dataset import Dataset
 from nns.core.datasets.mnist_dataset import MnistDataset
+from nns.core.functions.crossentropy import CrossEntropyFunction
 from nns.core.functions.function import Function
-from nns.core.functions.linear import LinearFunction
-from nns.core.functions.mse import MSEFunction
+from nns.core.functions.relu import RectifiedLinearFunction
+from nns.core.functions.softmax import SoftmaxFunction
+from nns.core.layers.activation import ActivationLayer
 from nns.core.layers.convolution2d import Convolution2D
 from nns.core.layers.dense import Dense
 from nns.core.layers.flatten import Flatten
 from nns.core.layers.maxpool2d import MaxPooling2D
 from nns.core.models.sequential import Sequential
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PAPER_FIGURES_DIRECTORY = PROJECT_ROOT / "mnist-in-pure-python" / "figures"
-PNG_DATASET_DIRECTORY = PROJECT_ROOT / "mnist-pngs-main"
-IDX_DATASET_DIRECTORY = PROJECT_ROOT / "mnist"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+WORKSPACE_ROOT = PROJECT_ROOT.parent
+PAPER_FIGURES_DIRECTORY = PROJECT_ROOT / "article" / "figures"
+PNG_DATASET_DIRECTORY = WORKSPACE_ROOT / "mnist-pngs-main"
+IDX_DATASET_DIRECTORY = WORKSPACE_ROOT / "mnist"
 
-TRAIN_SAMPLES_PER_CLASS = 8
-TEST_SAMPLES_PER_CLASS = 4
-BATCH_SIZE = 10
-EPOCHS = 4
+TRAIN_SAMPLES_PER_CLASS = 20
+TEST_SAMPLES_PER_CLASS = 8
+BATCH_SIZE = 20
+EPOCHS = 8
+
+CONV1_CHANNELS = 4
+CONV2_CHANNELS = 4
+DENSE_INPUTS = CONV2_CHANNELS * 12 * 12
 
 
 class ExperimentLearningRateFunction(Function):
     def call(self, epochIndex):
-        return 0.0001
+        if epochIndex < 2:
+            return 0.01
+
+        if epochIndex < 5:
+            return 0.005
+
+        return 0.002
 
 
 def one_hot_encode(label, classesCount=10):
@@ -41,7 +54,10 @@ def one_hot_encode(label, classesCount=10):
 def load_png_image(filePath):
     with Image.open(filePath) as image:
         grayscaleImage = image.convert("L")
-        pixels = list(grayscaleImage.getdata())
+        if hasattr(grayscaleImage, "get_flattened_data"):
+            pixels = list(grayscaleImage.get_flattened_data())
+        else:
+            pixels = list(grayscaleImage.getdata())
 
     return [
         [pixels[rowIndex * 28 + columnIndex] / 255 for columnIndex in range(28)]
@@ -113,12 +129,14 @@ def load_mnist_data():
 
 def create_model():
     return Sequential([
-        Convolution2D(out_channels=2, kernel_size=(3, 3), seed=1),
-        Convolution2D(out_channels=2, kernel_size=(3, 3), seed=2),
+        Convolution2D(out_channels=CONV1_CHANNELS, kernel_size=(3, 3), seed=1),
+        ActivationLayer(RectifiedLinearFunction()),
+        Convolution2D(out_channels=CONV2_CHANNELS, kernel_size=(3, 3), seed=2),
+        ActivationLayer(RectifiedLinearFunction()),
         MaxPooling2D(poolSize=(2, 2)),
         Flatten(),
-        Dense(288, 10, LinearFunction(), seed=3),
-    ], MSEFunction(), ExperimentLearningRateFunction())
+        Dense(DENSE_INPUTS, 10, SoftmaxFunction(), seed=3),
+    ], CrossEntropyFunction(), ExperimentLearningRateFunction())
 
 
 def unwrap_output(output):
@@ -133,17 +151,15 @@ def predict_label(model, inputData):
 
 
 def calculate_mean_loss(model, inputs, outputs):
-    mse = MSEFunction()
     losses = []
 
     for inputData, expectedOutput in zip(inputs, outputs):
         _, scores = predict_label(model, inputData)
-        sampleLoss = 0
-
-        for score, expectedValue in zip(scores, expectedOutput):
-            sampleLoss += mse.call((score, expectedValue))
-
-        losses.append(sampleLoss / len(expectedOutput))
+        sampleLoss = sum(
+            model.error.call((score, expectedValue))
+            for score, expectedValue in zip(scores, expectedOutput)
+        )
+        losses.append(sampleLoss)
 
     return sum(losses) / len(losses)
 
@@ -172,22 +188,25 @@ def build_confusion_matrix(model, inputs, labels):
 def save_training_curves(history, outputPath):
     epochs = [entry["epoch"] for entry in history]
     losses = [entry["train_loss"] for entry in history]
-    accuracies = [entry["test_accuracy"] for entry in history]
+    trainAccuracies = [entry["train_accuracy"] for entry in history]
+    testAccuracies = [entry["test_accuracy"] for entry in history]
 
     figure, axes = plot.subplots(1, 2, figsize=(11, 4.2))
 
     axes[0].plot(epochs, losses, color="#c75b12", linewidth=2.2, marker="o")
     axes[0].set_title("Training Loss")
     axes[0].set_xlabel("Epoch")
-    axes[0].set_ylabel("MSE")
+    axes[0].set_ylabel("Cross-Entropy")
     axes[0].grid(alpha=0.3)
 
-    axes[1].plot(epochs, accuracies, color="#1f6f8b", linewidth=2.2, marker="o")
-    axes[1].set_title("Test Accuracy")
+    axes[1].plot(epochs, trainAccuracies, color="#6d904f", linewidth=2.2, marker="o", label="Train")
+    axes[1].plot(epochs, testAccuracies, color="#1f6f8b", linewidth=2.2, marker="o", label="Test")
+    axes[1].set_title("Accuracy")
     axes[1].set_xlabel("Epoch")
     axes[1].set_ylabel("Accuracy")
     axes[1].set_ylim(0, 1)
     axes[1].grid(alpha=0.3)
+    axes[1].legend()
 
     figure.tight_layout()
     figure.savefig(outputPath, dpi=200, bbox_inches="tight")
@@ -228,37 +247,134 @@ def save_confusion_matrix(confusionMatrix, outputPath):
     plot.close(figure)
 
 
-def save_architecture_diagram(outputPath):
-    blocks = [
-        ("Input\n1 x 28 x 28", "#d9ead3"),
-        ("Conv2D\n4 x 26 x 26", "#fce5cd"),
-        ("Conv2D\n4 x 24 x 24", "#f9cb9c"),
-        ("MaxPool\n4 x 12 x 12", "#cfe2f3"),
-        ("Flatten\n576", "#d9d2e9"),
-        ("Dense\n10", "#ead1dc"),
-    ]
+def shape_of(values):
+    if isinstance(values, list):
+        if len(values) == 0:
+            return [0]
 
-    figure, axis = plot.subplots(figsize=(12, 2.8))
-    axis.set_xlim(0, 12)
-    axis.set_ylim(0, 2.2)
+        return [len(values)] + shape_of(values[0])
+
+    return []
+
+
+def format_shape(shape):
+    filteredShape = list(shape)
+
+    if len(filteredShape) == 2 and filteredShape[-1] == 1:
+        filteredShape = filteredShape[:-1]
+
+    return " x ".join(str(dimension) for dimension in filteredShape)
+
+
+def layer_label(layer):
+    if isinstance(layer, Convolution2D):
+        return "Conv2D"
+
+    if isinstance(layer, ActivationLayer):
+        if isinstance(layer.activation, RectifiedLinearFunction):
+            return "ReLU"
+
+        return layer.activation.__class__.__name__.replace("Function", "")
+
+    if isinstance(layer, MaxPooling2D):
+        return "MaxPool"
+
+    if isinstance(layer, Flatten):
+        return "Flatten"
+
+    if isinstance(layer, Dense):
+        if isinstance(layer.activation, SoftmaxFunction):
+            return "Dense + Softmax"
+
+        return "Dense"
+
+    return layer.__class__.__name__
+
+
+def layer_color(layer):
+    if isinstance(layer, Convolution2D):
+        return "#fce5cd"
+
+    if isinstance(layer, ActivationLayer):
+        return "#f4cccc"
+
+    if isinstance(layer, MaxPooling2D):
+        return "#cfe2f3"
+
+    if isinstance(layer, Flatten):
+        return "#d9d2e9"
+
+    if isinstance(layer, Dense):
+        return "#ead1dc"
+
+    return "#d9ead3"
+
+
+def trace_model(model, sampleInput):
+    currentOutput = [sampleInput]
+    tracedBlocks = [{
+        "name": "Input",
+        "shape": shape_of(currentOutput),
+        "color": "#d9ead3",
+    }]
+
+    for layer in model.layers:
+        forwardResult = layer.forwardPass(currentOutput)
+
+        if isinstance(forwardResult, tuple):
+            _, currentOutput = forwardResult
+        else:
+            currentOutput = forwardResult
+
+        tracedBlocks.append({
+            "name": layer_label(layer),
+            "shape": shape_of(currentOutput),
+            "color": layer_color(layer),
+        })
+
+    return tracedBlocks
+
+
+def save_architecture_diagram(model, sampleInput, outputPath):
+    blocks = trace_model(model, sampleInput)
+    figureWidth = max(12, len(blocks) * 1.7)
+    figure, axis = plot.subplots(figsize=(figureWidth, 3.1))
+
+    axis.set_xlim(0, len(blocks) * 1.9 + 0.8)
+    axis.set_ylim(0, 2.4)
     axis.axis("off")
 
     xPosition = 0.6
-    for index, (label, color) in enumerate(blocks):
-        block = FancyBboxPatch(
+
+    for index, block in enumerate(blocks):
+        box = FancyBboxPatch(
             (xPosition, 0.75),
-            1.4,
-            0.7,
+            1.42,
+            0.82,
             boxstyle="round,pad=0.08,rounding_size=0.08",
             linewidth=1.2,
             edgecolor="#1f1f1f",
-            facecolor=color,
+            facecolor=block["color"],
         )
-        axis.add_patch(block)
-        axis.text(xPosition + 0.7, 1.1, label, ha="center", va="center", fontsize=10)
+        axis.add_patch(box)
+        axis.text(
+            xPosition + 0.71,
+            1.16,
+            f"{block['name']}\n{format_shape(block['shape'])}",
+            ha="center",
+            va="center",
+            fontsize=10,
+        )
 
         if index < len(blocks) - 1:
-            arrow = FancyArrowPatch((xPosition + 1.42, 1.1), (xPosition + 2.1, 1.1), arrowstyle="->", mutation_scale=14, linewidth=1.4, color="#1f1f1f")
+            arrow = FancyArrowPatch(
+                (xPosition + 1.45, 1.16),
+                (xPosition + 2.08, 1.16),
+                arrowstyle="->",
+                mutation_scale=14,
+                linewidth=1.4,
+                color="#1f1f1f",
+            )
             axis.add_patch(arrow)
 
         xPosition += 1.9
@@ -303,15 +419,16 @@ def train_and_evaluate():
             f"Epoch {epoch}/{EPOCHS} | "
             f"train_loss={trainLoss:.4f} | "
             f"train_accuracy={trainAccuracy:.4f} | "
-            f"test_accuracy={testAccuracy:.4f}"
-        , flush=True)
+            f"test_accuracy={testAccuracy:.4f}",
+            flush=True,
+        )
 
     confusionMatrix = build_confusion_matrix(model, testInputs, testLabels)
 
     save_training_curves(history, PAPER_FIGURES_DIRECTORY / "mnist_training_curves.png")
     save_dataset_samples(testInputs, testLabels, PAPER_FIGURES_DIRECTORY / "mnist_dataset_samples.png")
     save_confusion_matrix(confusionMatrix, PAPER_FIGURES_DIRECTORY / "mnist_confusion_matrix.png")
-    save_architecture_diagram(PAPER_FIGURES_DIRECTORY / "mnist_network_architecture.png")
+    save_architecture_diagram(model, testInputs[0], PAPER_FIGURES_DIRECTORY / "mnist_network_architecture.png")
 
     metrics = {
         "dataset_source": datasetSource,
@@ -319,6 +436,7 @@ def train_and_evaluate():
         "test_samples": len(testInputs),
         "epochs": EPOCHS,
         "history": history,
+        "architecture": [layer_label(layer) for layer in model.layers],
         "final_train_accuracy": history[-1]["train_accuracy"],
         "final_test_accuracy": history[-1]["test_accuracy"],
     }

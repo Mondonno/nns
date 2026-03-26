@@ -24,4 +24,5 @@
 - The article compiles successfully.
 - The draft no longer depends on placeholder figures.
 - The MNIST experiment is reproducible from `nns/nns/mnist_conv2d.py`.
+- The figure set is generated directly into `article/figures/` by the experiment script.
 - The library now includes an IDX parser in `nns/core/datasets/mnist_dataset.py`.

@@ -1,3 +1,4 @@
+from .activation import ActivationLayer
 from .convolution2d import Convolution2D
 from .dense import Dense
 from .flatten import Flatten
@@ -10,6 +11,7 @@ from ..dict import DictEncoder
 layersDict = DictEncoder().encodeTypes([
     Convolution2D,
     Dense,
+    ActivationLayer,
     Flatten,
     Layer,
     MaxPooling2D,

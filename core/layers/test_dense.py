@@ -2,6 +2,7 @@ import math
 import pytest
 
 from nns.core.functions import SineFunction
+from nns.core.functions.softmax import SoftmaxFunction
 from nns.core.layers.dense import Dense
 
 class DummyActivation:
@@ -90,33 +91,64 @@ def test_dense_from_dict():
     assert dense.neuronsCount == 1
 
 def test_dense_backward_pass_minimal():
-    # Setup a minimal Dense layer and required context for backwardPass
-    class DummyError:
-        def derivative(self, pair):
-            # output, expected
-            return pair[0] - pair[1]
-        def call(self, pair):
-            return abs(pair[0] - pair[1])
-
     activation = DummyActivation()
     initializator = DummyInitializator()
     dense = Dense(inputsCount=1, neuronsCount=1, activation=activation, seed=0, initializator=initializator)
     dense.weights = [[1, 0.5]]  # 1 input + bias
+    inputs = [[3]]
 
-    # Mock the required attributes for backwardPass
-    dense.layers = [None, dense]  # previous and current layer
-    dense.error = DummyError()
-    global activationDerivativesForNeurons, errorDerivativesForNeurons, batchOutputs, batchErrorValues
-    activationDerivativesForNeurons = [[1], [1]]
-    errorDerivativesForNeurons = [[0], [0]]
-    batchOutputs = [2]  # expected output
-    batchErrorValues = []
+    weight_derivatives, next_layer_error_derivatives = dense.backwardPass(inputs, [1])
 
-    # currentLayerOutputs: output from this layer, previousLayerOutputs: output from previous layer
-    currentLayerOutputs = [[3]]  # output from this layer
-    previousLayerOutputs = [[1]]  # output from previous layer
+    assert weight_derivatives == [3, 1]
+    assert next_layer_error_derivatives == [1]
 
-    # Should return a list of weight derivatives (length = weights per neuron)
-    result = dense.backwardPass(currentLayerOutputs, previousLayerOutputs)
-    assert isinstance(result, list)
-    assert len(result) == 2  # 1 input + 1 bias
+def test_dense_forward_pass_with_softmax_vector_activation():
+    dense = Dense(
+        inputsCount=2,
+        neuronsCount=2,
+        activation=SoftmaxFunction(),
+        seed=0,
+        weights=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    _, outputs = dense.forwardPass([[2.0, 1.0]])
+
+    output_values = [single_output[0] for single_output in outputs]
+    expected_exp_2 = math.exp(2.0)
+    expected_exp_1 = math.exp(1.0)
+    expected_sum = expected_exp_2 + expected_exp_1
+
+    assert pytest.approx(output_values[0]) == expected_exp_2 / expected_sum
+    assert pytest.approx(output_values[1]) == expected_exp_1 / expected_sum
+
+def test_dense_backward_pass_with_softmax_jacobian():
+    dense = Dense(
+        inputsCount=2,
+        neuronsCount=2,
+        activation=SoftmaxFunction(),
+        seed=0,
+        weights=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+    )
+
+    inputs = [[2.0, 1.0]]
+    error_derivatives = [-1.0, 0.0]
+
+    weight_derivatives, next_layer_error_derivatives = dense.backwardPass(inputs, error_derivatives)
+
+    probability_0 = math.exp(2.0) / (math.exp(2.0) + math.exp(1.0))
+    probability_1 = 1 - probability_0
+    expected_delta_0 = -(probability_0 * (1 - probability_0))
+    expected_delta_1 = probability_0 * probability_1
+
+    assert pytest.approx(weight_derivatives) == [
+        2.0 * expected_delta_0,
+        1.0 * expected_delta_0,
+        expected_delta_0,
+        2.0 * expected_delta_1,
+        1.0 * expected_delta_1,
+        expected_delta_1,
+    ]
+    assert pytest.approx(next_layer_error_derivatives) == [
+        expected_delta_0,
+        expected_delta_1,
+    ]
