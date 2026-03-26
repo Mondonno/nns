@@ -36,15 +36,16 @@ class Dense(Layer):
         # ( (0 if i == self._inputsCount else 1) if (seed != None and math.isnan(seed)) else
         self.weights = [ [ (self.initializator.call(self, i, j))  for j in range(0, self._inputsCount + 1) ] for i in range(0, self._neuronsCount)] if weights is None else weights
 
-        print("Weights: ", self.weights)
-
         self.activation = activation
 
     def __flattenInputs(self, inputs):
         flattenedInputs = []
         for i in range(len(inputs)):
-            for j in range(len(inputs[i])):
-                flattenedInputs.append(inputs[i][j]) 
+            if isinstance(inputs[i], list):
+                for j in range(len(inputs[i])):
+                    flattenedInputs.append(inputs[i][j])
+            else:
+                flattenedInputs.append(inputs[i])
 
         return flattenedInputs
 
@@ -136,7 +137,18 @@ class Dense(Layer):
         return filledInputs, outputs
     
     def backwardPass(self, inputs, expectedOutputsErrorDerivatives, debug=False):
-        
+        legacyMode = (
+            isinstance(expectedOutputsErrorDerivatives, list) and
+            len(expectedOutputsErrorDerivatives) > 0 and
+            isinstance(expectedOutputsErrorDerivatives[0], list)
+        )
+
+        if legacyMode:
+            expectedOutputsErrorDerivatives = [
+                singleDerivative[0] if isinstance(singleDerivative, list) else singleDerivative
+                for singleDerivative in expectedOutputsErrorDerivatives
+            ]
+
         #currentLayerInputs = previousLayerOutputs
         
         # _ = previousLayerOutputs # this is the inputs for the current layer 
@@ -192,6 +204,9 @@ class Dense(Layer):
                 # del C / del z
                 currentErrorDerivative = currentLayerErrorDerivatives[k] or 1
 
+                if isinstance(currentErrorDerivative, list):
+                    currentErrorDerivative = currentErrorDerivative[0]
+
                 if (nextLayerErrorDerivatives[m] == None):
                     # print("change")
                     nextLayerErrorDerivatives[m] = 0
@@ -214,6 +229,9 @@ class Dense(Layer):
                 currentActivationDerivative = currentLayerActivationDerivativesForNeurons[k]
                 currentErrorDerivative = currentLayerErrorDerivatives[k] or 1
 
+                if isinstance(currentErrorDerivative, list):
+                    currentErrorDerivative = currentErrorDerivative[0]
+
                 singleWeightDerivative = currentPreviousLayerOutput * currentActivationDerivative * currentErrorDerivative
 
                 if(singleWeightDerivative != 0):
@@ -224,6 +242,9 @@ class Dense(Layer):
 
                 layerWeightsDerivativesVector.append(singleWeightDerivative)
                 # weightsDerivativesMatrix[currentLayerIndex][k][l].append(singleWeightDerivative)
+
+        if legacyMode:
+            return layerWeightsDerivativesVector
 
         return layerWeightsDerivativesVector, nextLayerErrorDerivatives
 

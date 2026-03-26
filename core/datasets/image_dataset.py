@@ -25,6 +25,7 @@ class ImageDataset(FileDataset):
                 - inputData (list): A 2D list representing the pixel data of the image.
                 - outputData (any or None): The label data derived from the file path using the labelFunction, or None if no labelFunction is provided.
         """
+        
         # Set mode to 'L' for grayscale images or 'RGB' for color images
         mode = 'L' if self.grayscale else 'RGB'
         with Image.open(filePath) as img:

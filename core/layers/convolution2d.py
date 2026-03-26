@@ -1,159 +1,313 @@
-from nns.core.functions.convolute import Convolute2DFunction
-from nns.core.layers.layer import Layer
 import random
 
+from nns.core.functions.convolute import Convolute2DFunction
+from nns.core.layers.layer import Layer
+
+
 class Convolution2D(Layer):
-    def __init__(self, out_channels, kernel_size=(3, 3), stride=(1, 1), dilation=(1, 1), padding=(0, 0), seed=None):
+    def __init__(self, out_channels=None, kernel_size=(3, 3), stride=(1, 1), dilation=(1, 1), padding=(0, 0), seed=None, kernel=None):
         super().__init__()
 
-        self.out_channels = out_channels
-        self.kernel_size = kernel_size
+        self.kernel = kernel
         self.stride = stride
         self.dilation = dilation
         self.padding = padding
+        self.kernel_size = kernel_size
+        self.out_channels = out_channels
+        self.in_channels = None
 
         if seed is None:
             self.seed = random.Random(seed).random()
         else:
             self.seed = seed
-            
-        randomInstance = random.Random(self.seed)
 
-        self.kernels = [
-            [[randomInstance.uniform(-0.1, 0.1) for _ in range(self.kernel_size[1])] for _ in range(self.kernel_size[0])]
-            for _ in range(self.out_channels)
-        ]
-        self.neuronsCount, self.inputsCount, self.weights = self._prepareWeights(self.kernels)
+        if self.kernel is not None:
+            if isinstance(self.kernel[0][0], list):
+                self.fixedKernels = self.kernel
+            else:
+                self.fixedKernels = [self.kernel]
+
+            self.out_channels = len(self.fixedKernels)
+            self.kernel_size = (len(self.fixedKernels[0]), len(self.fixedKernels[0][0]))
+            self.neuronsCount = self.out_channels
+            self.inputsCount = self.kernel_size[0] * self.kernel_size[1]
+            self.weights = [[value for row in singleKernel for value in row] + [0.0] for singleKernel in self.fixedKernels]
+        else:
+            self.fixedKernels = None
+            self.neuronsCount = self.out_channels
+            self.inputsCount = 0
+            self.weights = []
+
+        self.weightsCount = self.inputsCount + 1 if self.inputsCount > 0 else 0
+
+    def _is_batch_input(self, inputs):
+        return (
+            isinstance(inputs, list) and
+            len(inputs) > 0 and
+            isinstance(inputs[0], list) and
+            len(inputs[0]) > 0 and
+            isinstance(inputs[0][0], list) and
+            len(inputs[0][0]) > 0 and
+            isinstance(inputs[0][0][0], list)
+        )
+
+    def _has_channel_dimension(self, inputs):
+        return (
+            isinstance(inputs, list) and
+            len(inputs) > 0 and
+            isinstance(inputs[0], list) and
+            len(inputs[0]) > 0 and
+            isinstance(inputs[0][0], list)
+        )
+
+    def _normalize_channels(self, inputs):
+        if self._has_channel_dimension(inputs):
+            return inputs, True
+
+        return [inputs], False
+
+    def _zeros_like(self, matrix):
+        return [[0 for _ in range(len(matrix[0]))] for _ in range(len(matrix))]
+
+    def _flatten_matrix(self, matrix):
+        return [value for row in matrix for value in row]
+
+    def _add_in_place(self, baseMatrix, extraMatrix):
+        for rowIndex in range(len(baseMatrix)):
+            for columnIndex in range(len(baseMatrix[rowIndex])):
+                baseMatrix[rowIndex][columnIndex] += extraMatrix[rowIndex][columnIndex]
+
+    def _add_bias(self, matrix, bias):
+        return [[value + bias for value in row] for row in matrix]
+
+    def _flip_weights(self, weights):
+        return [weightsRow[::-1] for weightsRow in weights[::-1]]
+
+    def _initialize_weights(self, in_channels):
+        if self.fixedKernels is not None or len(self.weights) > 0:
+            return
+
+        self.in_channels = in_channels
+        self.inputsCount = self.in_channels * self.kernel_size[0] * self.kernel_size[1]
         self.weightsCount = self.inputsCount + 1
 
-    def _prepareWeights(self, weights):
-        """Prepare weights as [neuronsCount][inputsCount + 1] (last is bias) and return (neuronsCount, inputsCount, weightsList)"""
-        if isinstance(weights[0][0], list):
-            neuronsCount = len(weights)
-            kernelHeight = len(weights[0])
-            kernelWidth = len(weights[0][0])
-            inputsCount = kernelHeight * kernelWidth
-            weightsList = []
-            for channel in weights:
-                flat_kernel = [v for row in channel for v in row]
-                weightsList.append(flat_kernel + [0.0])
-        else:
-            neuronsCount = 1
-            kernelHeight = len(weights)
-            kernelWidth = len(weights[0])
-            inputsCount = kernelHeight * kernelWidth
-            flat_kernel = [v for row in weights for v in row]
-            weightsList = [flat_kernel + [0.0]]
-        return neuronsCount, inputsCount, weightsList
+        randomInstance = random.Random(self.seed)
+        self.weights = []
 
-    def _countWeights(self):
-        # Count total weights in the kernel(s)
-        if isinstance(self.weights[0][0], list):
-            # Multi-channel: sum over all channels
-            return sum(len(channel) * len(channel[0]) for channel in self.weights)
+        for _ in range(self.out_channels):
+            flatKernelWeights = []
+
+            for _ in range(self.in_channels):
+                for _ in range(self.kernel_size[0] * self.kernel_size[1]):
+                    flatKernelWeights.append(randomInstance.uniform(-0.1, 0.1))
+
+            self.weights.append(flatKernelWeights + [0.0])
+
+    def _reconstruct_kernel(self, weightsVector, inputChannelIndex):
+        kernelHeight, kernelWidth = self.kernel_size
+        kernelValuesCount = kernelHeight * kernelWidth
+        startIndex = inputChannelIndex * kernelValuesCount
+        endIndex = startIndex + kernelValuesCount
+        kernelFlat = weightsVector[startIndex:endIndex]
+
+        return [
+            kernelFlat[rowIndex * kernelWidth:(rowIndex + 1) * kernelWidth]
+            for rowIndex in range(kernelHeight)
+        ]
+
+    def _convolve_single(self, inputChannel, kernel, bias=0.0):
+        conv = Convolute2DFunction(kernel, self.stride, self.dilation, self.padding)
+        output = conv.call(inputChannel)
+        return self._add_bias(output, bias)
+
+    def _forward_single_fixed(self, inputs):
+        inputChannels, hadChannelDimension = self._normalize_channels(inputs)
+
+        if len(self.fixedKernels) == 1 and len(inputChannels) > 1:
+            return [self._convolve_single(singleChannel, self.fixedKernels[0]) for singleChannel in inputChannels]
+
+        if len(inputChannels) == 1 and len(self.fixedKernels) == 1:
+            output = self._convolve_single(inputChannels[0], self.fixedKernels[0])
+
+            if hadChannelDimension:
+                return [output]
+
+            return output
+
+        outputs = []
+
+        if len(inputChannels) == 1:
+            for singleKernel in self.fixedKernels:
+                outputs.append(self._convolve_single(inputChannels[0], singleKernel))
         else:
-            return len(self.weights) * len(self.weights[0])
+            for channelIndex in range(min(len(inputChannels), len(self.fixedKernels))):
+                outputs.append(self._convolve_single(inputChannels[channelIndex], self.fixedKernels[channelIndex]))
+
+        if not hadChannelDimension and len(outputs) == 1:
+            return outputs[0]
+
+        return outputs
+
+    def _forward_single_trainable(self, inputs):
+        inputChannels, hadChannelDimension = self._normalize_channels(inputs)
+        self._initialize_weights(len(inputChannels))
+
+        outputs = []
+
+        for outputChannelIndex in range(self.out_channels):
+            channelOutput = None
+
+            for inputChannelIndex in range(self.in_channels):
+                kernel = self._reconstruct_kernel(self.weights[outputChannelIndex][:-1], inputChannelIndex)
+                currentOutput = Convolute2DFunction(kernel, self.stride, self.dilation, self.padding).call(inputChannels[inputChannelIndex])
+
+                if channelOutput is None:
+                    channelOutput = currentOutput
+                else:
+                    self._add_in_place(channelOutput, currentOutput)
+
+            outputs.append(self._add_bias(channelOutput, self.weights[outputChannelIndex][-1]))
+
+        if not hadChannelDimension and len(outputs) == 1:
+            return outputs[0]
+
+        return outputs
 
     def forwardPass(self, inputs, debug=False):
-        # Support for batch and channel dimensions
-        # inputs: [batch][channel][height][width] or [channel][height][width]
-        # For compatibility, always return (filledInputs, outputs)
-        if isinstance(inputs[0][0][0], list):  # batch mode
-            outputs = [self._forwardSingle(sample) for sample in inputs]
-            filledInputs = inputs
-        else:
-            outputs = self._forwardSingle(inputs)
-            filledInputs = inputs
-        return filledInputs, outputs
+        _ = debug
 
-    def _forwardSingle(self, inputs):
-        def reconstruct_kernel(kernel_flat, input_shape):
-            kernel_side = input_shape[0]
-            return [kernel_flat[j * kernel_side:(j + 1) * kernel_side] for j in range(kernel_side)]
+        if self._is_batch_input(inputs):
+            return [self.forwardPass(singleInput) for singleInput in inputs]
 
-        if self.neuronsCount > 1:
-            outputs = []
-            for i in range(self.neuronsCount):
-                kernel_flat = self.weights[i][:-1]
-                bias = self.weights[i][-1]
-                kernel = reconstruct_kernel(kernel_flat, (len(inputs[0]), len(inputs[0][0]) if len(inputs[0]) > 0 else 1))
-                conv = Convolute2DFunction(kernel, self.stride, self.dilation, self.padding)
-                out = conv.call(inputs[i])
-                if isinstance(out[0], list):
-                    out = [[v + bias for v in row] for row in out]
-                else:
-                    out = [v + bias for v in out]
-                outputs.append(out)
-            return outputs
-        else:
-            kernel_flat = self.weights[0][:-1]
-            bias = self.weights[0][-1]
-            kernel = reconstruct_kernel(kernel_flat, (len(inputs), len(inputs[0]) if len(inputs) > 0 else 1))
-            conv = Convolute2DFunction(kernel, self.stride, self.dilation, self.padding)
-            out = conv.call(inputs)
-            if isinstance(out[0], list):
-                out = [[v + bias for v in row] for row in out]
-            else:
-                out = [v + bias for v in out]
-            return out
+        if self.fixedKernels is not None:
+            return self._forward_single_fixed(inputs)
 
-    def backwardPass(self, previousLayerOutputs, expectedOutputsErrorDerivatives, learningRate=0.01, debug=False):
-        """
-        previousLayerOutputs: original input to this layer (needed for kernel gradient)
-        expectedOutputsErrorDerivatives: gradient of loss w.r.t. output of this layer (same shape as output)
-        learningRate: step size for updating kernel
-        Returns: (layerWeightsDerivativesVector, nextLayerErrorDerivatives)
-        """
-        def reconstruct_kernel(kernel_flat, input_shape):
-            kernel_side = input_shape[0]
-            return [kernel_flat[j * kernel_side:(j + 1) * kernel_side] for j in range(kernel_side)]
+        return self._forward_single_trainable(inputs)
 
-        dL_dout = expectedOutputsErrorDerivatives
+    def _compute_weight_gradient(self, inputMatrix, outputGradient, kernelHeight, kernelWidth):
+        gradient = [[0 for _ in range(kernelWidth)] for _ in range(kernelHeight)]
+
+        for kernelRowIndex in range(kernelHeight):
+            for kernelColumnIndex in range(kernelWidth):
+                for outputRowIndex in range(len(outputGradient)):
+                    for outputColumnIndex in range(len(outputGradient[0])):
+                        inputRowIndex = outputRowIndex + kernelRowIndex
+                        inputColumnIndex = outputColumnIndex + kernelColumnIndex
+                        gradient[kernelRowIndex][kernelColumnIndex] += (
+                            inputMatrix[inputRowIndex][inputColumnIndex] *
+                            outputGradient[outputRowIndex][outputColumnIndex]
+                        )
+
+        return gradient
+
+    def _compute_input_gradient(self, outputGradient, kernel, inputShape):
+        inputHeight, inputWidth = inputShape
+        flippedKernel = self._flip_weights(kernel)
+        gradient = [[0 for _ in range(inputWidth)] for _ in range(inputHeight)]
+
+        for outputRowIndex in range(len(outputGradient)):
+            for outputColumnIndex in range(len(outputGradient[0])):
+                for kernelRowIndex in range(len(flippedKernel)):
+                    for kernelColumnIndex in range(len(flippedKernel[0])):
+                        inputRowIndex = outputRowIndex + kernelRowIndex
+                        inputColumnIndex = outputColumnIndex + kernelColumnIndex
+
+                        if inputRowIndex < inputHeight and inputColumnIndex < inputWidth:
+                            gradient[inputRowIndex][inputColumnIndex] += (
+                                outputGradient[outputRowIndex][outputColumnIndex] *
+                                flippedKernel[kernelRowIndex][kernelColumnIndex]
+                            )
+
+        return gradient
+
+    def backwardPass(self, previousLayerOutputs, expectedOutputsErrorDerivatives=None, learningRate=0.01, debug=False, **kwargs):
+        _ = debug
+
+        legacyMode = "learning_rate" in kwargs
+        if legacyMode:
+            learningRate = kwargs["learning_rate"]
+            previousLayerOutputs, expectedOutputsErrorDerivatives = expectedOutputsErrorDerivatives, previousLayerOutputs
+
+        previousChannels, previousHadChannelDimension = self._normalize_channels(previousLayerOutputs)
+        outputChannels, _ = self._normalize_channels(expectedOutputsErrorDerivatives)
+
+        if self.fixedKernels is not None:
+            sharedKernel = self.fixedKernels[0]
+            accumulatedKernelGradient = [[0 for _ in range(len(sharedKernel[0]))] for _ in range(len(sharedKernel))]
+            nextLayerErrorDerivatives = []
+
+            for channelIndex in range(len(outputChannels)):
+                currentInput = previousChannels[channelIndex if len(previousChannels) > 1 else 0]
+                currentGradient = outputChannels[channelIndex]
+                kernelGradient = self._compute_weight_gradient(
+                    currentInput,
+                    currentGradient,
+                    len(sharedKernel),
+                    len(sharedKernel[0]),
+                )
+                self._add_in_place(accumulatedKernelGradient, kernelGradient)
+                nextLayerErrorDerivatives.append(
+                    self._compute_input_gradient(
+                        currentGradient,
+                        sharedKernel,
+                        (len(currentInput), len(currentInput[0])),
+                    )
+                )
+
+            self.kernel = [
+                [
+                    self.kernel[rowIndex][columnIndex] - learningRate * accumulatedKernelGradient[rowIndex][columnIndex]
+                    for columnIndex in range(len(self.kernel[rowIndex]))
+                ]
+                for rowIndex in range(len(self.kernel))
+            ]
+            self.fixedKernels = [self.kernel]
+
+            if not previousHadChannelDimension and len(nextLayerErrorDerivatives) == 1:
+                nextLayerErrorDerivatives = nextLayerErrorDerivatives[0]
+
+            if legacyMode:
+                return nextLayerErrorDerivatives
+
+            flatKernelGradient = self._flatten_matrix(accumulatedKernelGradient)
+            return flatKernelGradient + [0.0], nextLayerErrorDerivatives
+
+        self._initialize_weights(len(previousChannels))
         layerWeightsDerivativesVector = []
+        nextLayerErrorDerivatives = [
+            self._zeros_like(previousChannels[inputChannelIndex])
+            for inputChannelIndex in range(len(previousChannels))
+        ]
 
-        if self.neuronsCount > 1:
-            gradientsWrtInputs = []
-            for i in range(self.neuronsCount):
-                kernel_flat = self.weights[i][:-1]
-                bias = self.weights[i][-1]
-                input_shape = (len(previousLayerOutputs[i]), len(previousLayerOutputs[i][0]) if len(previousLayerOutputs[i]) > 0 else 1)
-                kernel = reconstruct_kernel(kernel_flat, input_shape)
+        for outputChannelIndex in range(self.out_channels):
+            outputGradient = outputChannels[outputChannelIndex]
+            outputWeights = self.weights[outputChannelIndex]
 
-                flippedKernel = self._flipWeights(kernel)
-                convolutionFunctionForInput = Convolute2DFunction(flippedKernel, (1, 1), (1, 1), (0, 0))
-                gradientWrtInput = convolutionFunctionForInput.call(dL_dout[i])
-                gradientsWrtInputs.append(gradientWrtInput)
+            for inputChannelIndex in range(self.in_channels):
+                kernel = self._reconstruct_kernel(outputWeights[:-1], inputChannelIndex)
+                kernelGradient = self._compute_weight_gradient(
+                    previousChannels[inputChannelIndex],
+                    outputGradient,
+                    self.kernel_size[0],
+                    self.kernel_size[1],
+                )
 
-                convolutionFunctionForWeights = Convolute2DFunction(dL_dout[i], (1, 1), (1, 1), (0, 0))
-                gradientWrtKernel = convolutionFunctionForWeights.call(previousLayerOutputs[i])
-                grad_flat = [v for row in gradientWrtKernel for v in row]
-                if isinstance(dL_dout[i][0], list):
-                    grad_bias = sum(sum(row) for row in dL_dout[i])
-                else:
-                    grad_bias = sum(dL_dout[i])
-                layerWeightsDerivativesVector.extend(grad_flat + [grad_bias])
-            nextLayerErrorDerivatives = gradientsWrtInputs
-        else:
-            kernel_flat = self.weights[0][:-1]
-            input_shape = (len(previousLayerOutputs), len(previousLayerOutputs[0]) if len(previousLayerOutputs) > 0 else 1)
-            kernel = reconstruct_kernel(kernel_flat, input_shape)
+                layerWeightsDerivativesVector.extend(self._flatten_matrix(kernelGradient))
 
-            flippedKernel = self._flipWeights(kernel)
-            convolutionFunctionForInput = Convolute2DFunction(flippedKernel, (1, 1), (1, 1), (0, 0))
-            gradientWrtInput = convolutionFunctionForInput.call(dL_dout)
+                inputGradient = self._compute_input_gradient(
+                    outputGradient,
+                    kernel,
+                    (len(previousChannels[inputChannelIndex]), len(previousChannels[inputChannelIndex][0])),
+                )
+                self._add_in_place(nextLayerErrorDerivatives[inputChannelIndex], inputGradient)
 
-            convolutionFunctionForWeights = Convolute2DFunction(dL_dout, (1, 1), (1, 1), (0, 0))
-            gradientWrtKernel = convolutionFunctionForWeights.call(previousLayerOutputs)
-            grad_flat = [v for row in gradientWrtKernel for v in row]
-            if isinstance(dL_dout[0], list):
-                grad_bias = sum(sum(row) for row in dL_dout)
-            else:
-                grad_bias = sum(dL_dout)
-            layerWeightsDerivativesVector.extend(grad_flat + [grad_bias])
-            nextLayerErrorDerivatives = gradientWrtInput
+            biasGradient = sum(sum(row) for row in outputGradient)
+            layerWeightsDerivativesVector.append(biasGradient)
+
+        if not previousHadChannelDimension and len(nextLayerErrorDerivatives) == 1:
+            nextLayerErrorDerivatives = nextLayerErrorDerivatives[0]
+
+        if legacyMode:
+            return nextLayerErrorDerivatives
 
         return layerWeightsDerivativesVector, nextLayerErrorDerivatives
-
-    def _flipWeights(self, weights):
-        # Flip the weights by 180 degrees (vertical and horizontal)
-        return [weightsRow[::-1] for weightsRow in weights[::-1]]

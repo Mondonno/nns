@@ -15,6 +15,9 @@ class FileDataset(Dataset):
             if rel_depth > 1:
                 continue
             for fname in files:
+                if fname.startswith("."):
+                    continue
+
                 file_path = os.path.join(root, fname)
                 if os.path.isfile(file_path):
                     self.filePaths.append(file_path)

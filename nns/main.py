@@ -31,6 +31,8 @@ from ..core.dict import DictEncoder
 
 from .playground import *
 
+from .
+
 # 1. czym jest siec
 # 2. czym jest neuron
 # 3. czym jest warstwa
@@ -45,6 +47,10 @@ class StaticSineLayer(Dense):
     def __init__(self):
         super().__init__(1, 1, SineFunction(), seed=10, initializator=None, weights=[[1, 0]])
         # n n_w n_b i -> i * 
+
+mnistModel = Sequential([
+    Convolution2D
+])
 
 model = Sequential([
     # Dense(1, 1, LinearFunction(), seed = None),

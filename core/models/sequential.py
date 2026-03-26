@@ -85,7 +85,7 @@ class Sequential(Model):
                         currentLayerIndex = i - 1
                         currentLayer = self.layers[currentLayerIndex]
 
-                        currentLayerNeuronsCount = currentLayer.neuronsCount
+                        currentLayerNeuronsCount = getattr(currentLayer, "neuronsCount", len(currentLayerOutputs))
 
                         if(len(currentLayerErrorDerivatives) == 0):
                             currentLayerErrorDerivatives = [ None for _ in range(currentLayerNeuronsCount)]
@@ -116,18 +116,29 @@ class Sequential(Model):
                                 # del C / del z
                                 currentLayerErrorDerivatives[k] = errorDerivative
 
-                        layerWeightsDerivativesVector, nextLayerErrorDerivatives = currentLayer.backwardPass(previousLayerOutputs, currentLayerErrorDerivatives)
+                        backwardPassResult = currentLayer.backwardPass(previousLayerOutputs, currentLayerErrorDerivatives)
+
+                        if isinstance(backwardPassResult, tuple):
+                            layerWeightsDerivativesVector, nextLayerErrorDerivatives = backwardPassResult
+                        else:
+                            layerWeightsDerivativesVector = []
+                            nextLayerErrorDerivatives = backwardPassResult
+
                         currentLayerErrorDerivatives = nextLayerErrorDerivatives
 
                         # it is append at the beggining 
-                        weightsDerivativesVector[:0] = (layerWeightsDerivativesVector)
+                        if len(layerWeightsDerivativesVector) > 0:
+                            weightsDerivativesVector[:0] = (layerWeightsDerivativesVector)
                         # activationDerivativesForNeurons[currentLayerIndex] = self.layers[currentLayerIndex].derivatives(layerOutputs[i])
                     
                     weightsDerivativesVectorIndex = 0
 
                     for i in range(len(self.layers)):
-                        for k in range(self.layers[i].neuronsCount):
-                            for l in range(self.layers[i].inputsCount + 1):
+                        if not hasattr(self.layers[i], "weights"):
+                            continue
+
+                        for k in range(len(self.layers[i].weights)):
+                            for l in range(len(self.layers[i].weights[k])):
                                 # weightsDerivativesSum = sum(weightsDerivativesMatrix[i][k][l])
                                 # weightsDerivativesCount = len(weightsDerivativesMatrix[i][k][l])
 
@@ -161,7 +172,13 @@ class Sequential(Model):
         for i in range(1, len(self.layers) + 1):
             currentLayerOutputsIndex = i - 1
             currentLayerOutputs = outputs[i - 1]
-            currentLayerInputs, currentLayerOutputs = self.layers[currentLayerOutputsIndex].forwardPass(currentLayerOutputs)
+            currentLayerForwardResult = self.layers[currentLayerOutputsIndex].forwardPass(currentLayerOutputs)
+
+            if isinstance(currentLayerForwardResult, tuple):
+                currentLayerInputs, currentLayerOutputs = currentLayerForwardResult
+            else:
+                currentLayerInputs = currentLayerOutputs
+                currentLayerOutputs = currentLayerForwardResult
 
             embeddedCurrentLayerOutputs = currentLayerOutputs
 

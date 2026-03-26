@@ -1,4 +1,4 @@
-from random import *
+from random import Random
 
 class Dataset():
     def __init__(self, size, inputs, outputs, batchSize, seed = None, appendBatchResidue = False):
@@ -25,20 +25,19 @@ class Dataset():
     
     def generate(self):
         dataIndicies = [ i for i in range(self.size) ]
-        shuffledIndicies = dataIndicies
+        shuffledIndicies = dataIndicies[:]
 
         self.randomNumberGenerator.shuffle(shuffledIndicies)
-
-        shuffledInputs = [ self.inputs[i] for i in range(len(shuffledIndicies)) ]
-        shuffledOutputs = [ self.outputs[i] for i in range(len(shuffledIndicies)) ]
 
         onTimeBatchedInputsAndOutputs = []
         batchedInputsAndOutputs = []
 
-        for i in range(1, self.size + 1):
+        for i in range(1, len(shuffledIndicies) + 1):
+            shuffledIndex = shuffledIndicies[i - 1]
+
             onTimeBatchedInputsAndOutputs.append((
-                shuffledInputs[i - 1],
-                shuffledOutputs[i - 1]
+                self.inputs[shuffledIndex],
+                self.outputs[shuffledIndex]
             ))
 
             if i % self.batchSize == 0:

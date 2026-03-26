@@ -34,19 +34,15 @@ class Convolute2DFunction():
 
     # the input is a matrix
     def call(self, input):
-        # we can skip checkin the correctness of params at the moment
         matrix = input
 
         kernel_shape_first_dim = len(self.kernel)
         kernel_shape_second_dim = len(self.kernel[0]) if kernel_shape_first_dim > 0 else 0
-        kernel_shape = (kernel_shape_first_dim, kernel_shape_second_dim)
-
-
         n = len(matrix)
         m = len(matrix[0]) if n > 0 else 0
 
-        effective_kernel_height = (kernel_shape[0] - 1) * self.dilation[0] - 1
-        effective_kernel_width = (kernel_shape[1] - 1) * self.dilation[1] - 1
+        effective_kernel_height = (kernel_shape_first_dim - 1) * self.dilation[0] + 1
+        effective_kernel_width = (kernel_shape_second_dim - 1) * self.dilation[1] + 1
 
         padded_height = n + (2 * self.padding[0])
         padded_width = m + (2 * self.padding[1])
@@ -56,41 +52,21 @@ class Convolute2DFunction():
 
         output_matrix = create_zero_matrix(output_height, output_width)
 
-        kernel_offset = (kernel_shape[0] // 2, kernel_shape[1] // 2)
-
-        center_x_starting_point = kernel_offset[0] * self.dilation[0]
-        center_y_starting_point = kernel_offset[1] * self.dilation[1]
-
         for i in range(output_height):
-            center_x = center_x_starting_point + (i * self.stride[0])
-
-            # Calculate the horizontal indices (columns) of the input matrix that the kernel will cover during convolution.
-            # The kernel is centered at `center_x`, and its coverage is expanded by the dilation factor along the x-axis.
-            # The `kernel_offset[0]` represents the half-width of the kernel, and `self.dilation[0]` controls how much
-            # the kernel elements are spaced apart.
-            # For each position in the kernel, `j` ranges from -kernel_offset[0] to kernel_offset[0], which gives us the
-            # relative positions of the kernel's elements.
-            # The dilation factor is applied by multiplying `j` with `self.dilation[0]`, effectively increasing the spacing
-            # between adjacent elements in the kernel.
-            indices_x = [(center_x + j * self.dilation[0]) for j in range(-kernel_offset[0], kernel_offset[0] + 1)]
             for k in range(output_width):
-                center_y = center_y_starting_point + (k * self.stride[1]) # it repeats we can abstract this into multiple dimensions
-                indices_y = [center_y + j * self.dilation[1] for j in range(-kernel_offset[1], kernel_offset[1] + 1)]
-
-                # Extract submatrix using indices_x and indices_y for pure Python lists
-                submatrix = [
-                    [matrix[x][y] if 0 <= x < n and 0 <= y < m else 0 for y in indices_y]
-                    for x in indices_x
-                ]
-
                 sum_result = 0
-                for a in range(len(self.kernel)):
-                    for b in range(len(self.kernel[0])):
-                        sum_result += submatrix[a][b] * self.kernel[a][b]
+
+                for a in range(kernel_shape_first_dim):
+                    for b in range(kernel_shape_second_dim):
+                        inputRowIndex = i * self.stride[0] + a * self.dilation[0] - self.padding[0]
+                        inputColumnIndex = k * self.stride[1] + b * self.dilation[1] - self.padding[1]
+
+                        if 0 <= inputRowIndex < n and 0 <= inputColumnIndex < m:
+                            sum_result += matrix[inputRowIndex][inputColumnIndex] * self.kernel[a][b]
 
                 output_matrix[i][k] = sum_result
 
-        return output_matrix # it should do it :)
+        return output_matrix
 
     def derivative(self):
         raise TypeError()
