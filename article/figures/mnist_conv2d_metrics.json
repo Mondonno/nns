@@ -1,67 +1,139 @@
 {
-  "dataset_source": "png",
-  "train_samples": 200,
-  "test_samples": 80,
-  "epochs": 8,
-  "history": [
-    {
-      "epoch": 1,
-      "train_loss": 2.301752437178828,
-      "train_accuracy": 0.12,
-      "test_accuracy": 0.0625
-    },
-    {
-      "epoch": 2,
-      "train_loss": 2.2958928795957307,
-      "train_accuracy": 0.2,
-      "test_accuracy": 0.175
-    },
-    {
-      "epoch": 3,
-      "train_loss": 1.9934705531735748,
-      "train_accuracy": 0.5,
-      "test_accuracy": 0.4125
-    },
-    {
-      "epoch": 4,
-      "train_loss": 0.6854261588997639,
-      "train_accuracy": 0.835,
-      "test_accuracy": 0.6125
-    },
-    {
-      "epoch": 5,
-      "train_loss": 0.43952684190177893,
-      "train_accuracy": 0.86,
-      "test_accuracy": 0.7
-    },
-    {
-      "epoch": 6,
-      "train_loss": 0.4034394866529742,
-      "train_accuracy": 0.865,
-      "test_accuracy": 0.6125
-    },
-    {
-      "epoch": 7,
-      "train_loss": 0.23812113419998002,
-      "train_accuracy": 0.925,
-      "test_accuracy": 0.7125
-    },
-    {
-      "epoch": 8,
-      "train_loss": 0.15994467415306335,
-      "train_accuracy": 0.935,
-      "test_accuracy": 0.725
-    }
-  ],
-  "architecture": [
-    "Conv2D",
-    "ReLU",
-    "Conv2D",
-    "ReLU",
-    "MaxPool",
-    "Flatten",
-    "Dense + Softmax"
-  ],
-  "final_train_accuracy": 0.935,
-  "final_test_accuracy": 0.725
+  "subset_experiment": {
+    "experiment": "subset_cnn",
+    "dataset_source": "idx",
+    "train_samples": 200,
+    "test_samples": 80,
+    "epochs": 8,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 2.30143785998311,
+        "train_accuracy": 0.08,
+        "test_accuracy": 0.05
+      },
+      {
+        "epoch": 2,
+        "train_loss": 2.296431043573499,
+        "train_accuracy": 0.25,
+        "test_accuracy": 0.175
+      },
+      {
+        "epoch": 3,
+        "train_loss": 2.02732215031392,
+        "train_accuracy": 0.43,
+        "test_accuracy": 0.3875
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.7075722958299464,
+        "train_accuracy": 0.75,
+        "test_accuracy": 0.4625
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.3780570738568909,
+        "train_accuracy": 0.89,
+        "test_accuracy": 0.7
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.2716431944610173,
+        "train_accuracy": 0.9,
+        "test_accuracy": 0.675
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.2772783570658134,
+        "train_accuracy": 0.925,
+        "test_accuracy": 0.725
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.3109155785430021,
+        "train_accuracy": 0.9,
+        "test_accuracy": 0.6625
+      }
+    ],
+    "architecture": [
+      "Conv2D",
+      "ReLU",
+      "Conv2D",
+      "ReLU",
+      "MaxPool",
+      "Flatten",
+      "Dense + Softmax"
+    ],
+    "final_train_accuracy": 0.9,
+    "final_test_accuracy": 0.6625
+  },
+  "full_experiment": {
+    "experiment": "full_softmax",
+    "dataset_source": "idx",
+    "train_samples": 60000,
+    "test_samples": 10000,
+    "epochs": 8,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 0.17394826800109048,
+        "train_accuracy": 0.9515,
+        "test_accuracy": 0.9493
+      },
+      {
+        "epoch": 2,
+        "train_loss": 0.15882592670231893,
+        "train_accuracy": 0.952,
+        "test_accuracy": 0.9537
+      },
+      {
+        "epoch": 3,
+        "train_loss": 0.1802528384330177,
+        "train_accuracy": 0.9465,
+        "test_accuracy": 0.9462
+      },
+      {
+        "epoch": 4,
+        "train_loss": 0.11848821749957375,
+        "train_accuracy": 0.964,
+        "test_accuracy": 0.9614
+      },
+      {
+        "epoch": 5,
+        "train_loss": 0.12920980905640245,
+        "train_accuracy": 0.9645,
+        "test_accuracy": 0.9594
+      },
+      {
+        "epoch": 6,
+        "train_loss": 0.17252066735651803,
+        "train_accuracy": 0.947,
+        "test_accuracy": 0.9493
+      },
+      {
+        "epoch": 7,
+        "train_loss": 0.20133834058364788,
+        "train_accuracy": 0.938,
+        "test_accuracy": 0.9407
+      },
+      {
+        "epoch": 8,
+        "train_loss": 0.21715128512781012,
+        "train_accuracy": 0.9295,
+        "test_accuracy": 0.9438
+      }
+    ],
+    "architecture": [
+      "Conv2D",
+      "ReLU",
+      "Conv2D",
+      "ReLU",
+      "MaxPool",
+      "Flatten",
+      "Dense + Softmax"
+    ],
+    "final_train_accuracy": 0.9295,
+    "final_test_accuracy": 0.9438,
+    "train_accuracy_note": "Measured on the first 2000 training samples after each epoch."
+  }
 }

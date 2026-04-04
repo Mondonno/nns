@@ -9,6 +9,7 @@
   - `figures/mnist_network_architecture.png`
   - `figures/mnist_training_curves.png`
   - `figures/mnist_confusion_matrix.png`
+  - `figures/mnist_experiment_comparison.png`
 - Metrics artifact: `figures/mnist_conv2d_metrics.json`
 - Compiled PDF: `main.pdf`
 

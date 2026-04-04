@@ -3,7 +3,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plot
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
-from PIL import Image
 
 from nns.core.datasets.dataset import Dataset
 from nns.core.datasets.mnist_dataset import MnistDataset
@@ -21,20 +20,23 @@ from nns.core.models.sequential import Sequential
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = PROJECT_ROOT.parent
 PAPER_FIGURES_DIRECTORY = PROJECT_ROOT / "article" / "figures"
-PNG_DATASET_DIRECTORY = WORKSPACE_ROOT / "mnist-pngs-main"
-IDX_DATASET_DIRECTORY = WORKSPACE_ROOT / "mnist"
 
-TRAIN_SAMPLES_PER_CLASS = 20
-TEST_SAMPLES_PER_CLASS = 8
-BATCH_SIZE = 20
-EPOCHS = 8
+SUBSET_TRAIN_SAMPLES_PER_CLASS = 20
+SUBSET_TEST_SAMPLES_PER_CLASS = 8
+SUBSET_BATCH_SIZE = 20
+SUBSET_EPOCHS = 8
+
+FULL_BATCH_SIZE = 100
+FULL_EPOCHS = 8
+FULL_TRAIN_EVAL_LIMIT = 2000
+FULL_TEST_EVAL_LIMIT = 10000
 
 CONV1_CHANNELS = 4
 CONV2_CHANNELS = 4
-DENSE_INPUTS = CONV2_CHANNELS * 12 * 12
+SUBSET_DENSE_INPUTS = CONV2_CHANNELS * 12 * 12
 
 
-class ExperimentLearningRateFunction(Function):
+class SubsetLearningRateFunction(Function):
     def call(self, epochIndex):
         if epochIndex < 2:
             return 0.01
@@ -45,89 +47,90 @@ class ExperimentLearningRateFunction(Function):
         return 0.002
 
 
+class FullLearningRateFunction(Function):
+    def call(self, epochIndex):
+        if epochIndex < 1:
+            return 0.03
+
+        return 0.01
+
+
+def find_existing_path(candidates):
+    for candidate in candidates:
+        path = Path(candidate)
+        if path.exists():
+            return path
+
+    raise ValueError(f"None of the candidate paths exists: {candidates}")
+
+
+def resolve_idx_paths():
+    trainImagesFilePath = find_existing_path([
+        WORKSPACE_ROOT / "mnist" / "train-images-idx3-ubyte",
+        WORKSPACE_ROOT / "mnist" / "train-images.idx3-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "train-images-idx3-ubyte" / "train-images-idx3-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "train-images.idx3-ubyte",
+    ])
+    trainLabelsFilePath = find_existing_path([
+        WORKSPACE_ROOT / "mnist" / "train-labels-idx1-ubyte",
+        WORKSPACE_ROOT / "mnist" / "train-labels.idx1-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "train-labels-idx1-ubyte" / "train-labels-idx1-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "train-labels.idx1-ubyte",
+    ])
+    testImagesFilePath = find_existing_path([
+        WORKSPACE_ROOT / "mnist" / "t10k-images-idx3-ubyte",
+        WORKSPACE_ROOT / "mnist" / "t10k-images.idx3-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "t10k-images-idx3-ubyte" / "t10k-images-idx3-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "t10k-images.idx3-ubyte",
+    ])
+    testLabelsFilePath = find_existing_path([
+        WORKSPACE_ROOT / "mnist" / "t10k-labels-idx1-ubyte",
+        WORKSPACE_ROOT / "mnist" / "t10k-labels.idx1-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "t10k-labels-idx1-ubyte" / "t10k-labels-idx1-ubyte",
+        WORKSPACE_ROOT / "mnist-archive" / "t10k-labels.idx1-ubyte",
+    ])
+
+    return trainImagesFilePath, trainLabelsFilePath, testImagesFilePath, testLabelsFilePath
+
+
 def one_hot_encode(label, classesCount=10):
     encodedLabel = [0 for _ in range(classesCount)]
     encodedLabel[label] = 1
     return encodedLabel
 
 
-def load_png_image(filePath):
-    with Image.open(filePath) as image:
-        grayscaleImage = image.convert("L")
-        if hasattr(grayscaleImage, "get_flattened_data"):
-            pixels = list(grayscaleImage.get_flattened_data())
-        else:
-            pixels = list(grayscaleImage.getdata())
-
-    return [
-        [pixels[rowIndex * 28 + columnIndex] / 255 for columnIndex in range(28)]
-        for rowIndex in range(28)
-    ]
-
-
-def load_png_split(splitName, samplesPerClass):
-    splitDirectory = PNG_DATASET_DIRECTORY / splitName
-    inputs = []
-    outputs = []
-    labels = []
-
-    for labelDirectory in sorted(splitDirectory.iterdir(), key=lambda path: path.name):
-        if not labelDirectory.is_dir() or labelDirectory.name.startswith("."):
-            continue
-
-        label = int(labelDirectory.name)
-        imagePaths = sorted(labelDirectory.glob("*.png"))[:samplesPerClass]
-
-        for imagePath in imagePaths:
-            inputs.append(load_png_image(imagePath))
-            outputs.append(one_hot_encode(label))
-            labels.append(label)
-
-    return inputs, outputs, labels
-
-
-def load_idx_split(imagesFilePath, labelsFilePath, limit):
+def load_balanced_idx_split(imagesFilePath, labelsFilePath, samplesPerClass):
     dataset = MnistDataset(
         imagesFilePath=imagesFilePath,
         labelsFilePath=labelsFilePath,
-        batchSize=BATCH_SIZE,
-        limit=limit,
+        batchSize=max(1, samplesPerClass),
         normalize=True,
         oneHot=True,
         lazy=True,
         seed=0,
     )
 
-    inputs = [dataset.loadImage(index) for index in range(dataset.size)]
-    outputs = dataset.outputs[:dataset.size]
-    labels = dataset.labels[:dataset.size]
-    return inputs, outputs, labels
+    selectedInputs = []
+    selectedOutputs = []
+    selectedLabels = []
+    selectedCounts = {digit: 0 for digit in range(10)}
+
+    for index, label in enumerate(dataset.labels):
+        if selectedCounts[label] >= samplesPerClass:
+            continue
+
+        selectedInputs.append(dataset.loadImage(index))
+        selectedOutputs.append(dataset.outputs[index])
+        selectedLabels.append(label)
+        selectedCounts[label] += 1
+
+        if all(count >= samplesPerClass for count in selectedCounts.values()):
+            break
+
+    return selectedInputs, selectedOutputs, selectedLabels
 
 
-def load_mnist_data():
-    trainImagesFilePath = IDX_DATASET_DIRECTORY / "train-images-idx3-ubyte"
-    trainLabelsFilePath = IDX_DATASET_DIRECTORY / "train-labels-idx1-ubyte"
-    testImagesFilePath = IDX_DATASET_DIRECTORY / "t10k-images-idx3-ubyte"
-    testLabelsFilePath = IDX_DATASET_DIRECTORY / "t10k-labels-idx1-ubyte"
-
-    if all(path.exists() for path in [
-        trainImagesFilePath,
-        trainLabelsFilePath,
-        testImagesFilePath,
-        testLabelsFilePath,
-    ]):
-        trainLimit = TRAIN_SAMPLES_PER_CLASS * 10
-        testLimit = TEST_SAMPLES_PER_CLASS * 10
-        trainInputs, trainOutputs, trainLabels = load_idx_split(trainImagesFilePath, trainLabelsFilePath, trainLimit)
-        testInputs, testOutputs, testLabels = load_idx_split(testImagesFilePath, testLabelsFilePath, testLimit)
-        return "idx", trainInputs, trainOutputs, trainLabels, testInputs, testOutputs, testLabels
-
-    trainInputs, trainOutputs, trainLabels = load_png_split("train", TRAIN_SAMPLES_PER_CLASS)
-    testInputs, testOutputs, testLabels = load_png_split("test", TEST_SAMPLES_PER_CLASS)
-    return "png", trainInputs, trainOutputs, trainLabels, testInputs, testOutputs, testLabels
-
-
-def create_model():
+def create_subset_model():
     return Sequential([
         Convolution2D(out_channels=CONV1_CHANNELS, kernel_size=(3, 3), seed=1),
         ActivationLayer(RectifiedLinearFunction()),
@@ -135,8 +138,16 @@ def create_model():
         ActivationLayer(RectifiedLinearFunction()),
         MaxPooling2D(poolSize=(2, 2)),
         Flatten(),
-        Dense(DENSE_INPUTS, 10, SoftmaxFunction(), seed=3),
-    ], CrossEntropyFunction(), ExperimentLearningRateFunction())
+        Dense(SUBSET_DENSE_INPUTS, 10, SoftmaxFunction(), seed=3),
+    ], CrossEntropyFunction(), SubsetLearningRateFunction())
+
+
+def create_full_model():
+    # return Sequential([
+    #     Flatten(),
+    #     Dense(784, 10, SoftmaxFunction(), seed=11),
+    # ], CrossEntropyFunction(), FullLearningRateFunction())
+    return create_subset_model()
 
 
 def unwrap_output(output):
@@ -175,6 +186,34 @@ def calculate_accuracy(model, inputs, labels):
     return correctPredictions / len(labels)
 
 
+def calculate_dataset_accuracy(model, dataset, limit=None):
+    size = dataset.size if limit is None else min(limit, dataset.size)
+    correctPredictions = 0
+
+    for index in range(size):
+        prediction, _ = predict_label(model, dataset.loadImage(index))
+        if prediction == dataset.labels[index]:
+            correctPredictions += 1
+
+    return correctPredictions / size
+
+
+def calculate_dataset_mean_loss(model, dataset, limit):
+    size = min(limit, dataset.size)
+    losses = []
+
+    for index in range(size):
+        _, scores = predict_label(model, dataset.loadImage(index))
+        expectedOutput = dataset.outputs[index]
+        sampleLoss = sum(
+            model.error.call((score, expectedValue))
+            for score, expectedValue in zip(scores, expectedOutput)
+        )
+        losses.append(sampleLoss)
+
+    return sum(losses) / len(losses)
+
+
 def build_confusion_matrix(model, inputs, labels):
     confusionMatrix = [[0 for _ in range(10)] for _ in range(10)]
 
@@ -185,28 +224,60 @@ def build_confusion_matrix(model, inputs, labels):
     return confusionMatrix
 
 
-def save_training_curves(history, outputPath):
-    epochs = [entry["epoch"] for entry in history]
-    losses = [entry["train_loss"] for entry in history]
-    trainAccuracies = [entry["train_accuracy"] for entry in history]
-    testAccuracies = [entry["test_accuracy"] for entry in history]
+def build_dataset_confusion_matrix(model, dataset, limit=None):
+    size = dataset.size if limit is None else min(limit, dataset.size)
+    confusionMatrix = [[0 for _ in range(10)] for _ in range(10)]
 
-    figure, axes = plot.subplots(1, 2, figsize=(11, 4.2))
+    for index in range(size):
+        label = dataset.labels[index]
+        prediction, _ = predict_label(model, dataset.loadImage(index))
+        confusionMatrix[label][prediction] += 1
 
-    axes[0].plot(epochs, losses, color="#c75b12", linewidth=2.2, marker="o")
-    axes[0].set_title("Training Loss")
-    axes[0].set_xlabel("Epoch")
-    axes[0].set_ylabel("Cross-Entropy")
-    axes[0].grid(alpha=0.3)
+    return confusionMatrix
 
-    axes[1].plot(epochs, trainAccuracies, color="#6d904f", linewidth=2.2, marker="o", label="Train")
-    axes[1].plot(epochs, testAccuracies, color="#1f6f8b", linewidth=2.2, marker="o", label="Test")
-    axes[1].set_title("Accuracy")
-    axes[1].set_xlabel("Epoch")
-    axes[1].set_ylabel("Accuracy")
-    axes[1].set_ylim(0, 1)
-    axes[1].grid(alpha=0.3)
-    axes[1].legend()
+
+def save_training_curves(subsetHistory, fullHistory, outputPath):
+    figure, axes = plot.subplots(2, 2, figsize=(12, 8))
+
+    subsetEpochs = [entry["epoch"] for entry in subsetHistory]
+    subsetLosses = [entry["train_loss"] for entry in subsetHistory]
+    subsetTrainAccuracies = [entry["train_accuracy"] for entry in subsetHistory]
+    subsetTestAccuracies = [entry["test_accuracy"] for entry in subsetHistory]
+
+    fullEpochs = [entry["epoch"] for entry in fullHistory]
+    fullLosses = [entry["train_loss"] for entry in fullHistory]
+    fullTrainAccuracies = [entry["train_accuracy"] for entry in fullHistory]
+    fullTestAccuracies = [entry["test_accuracy"] for entry in fullHistory]
+
+    axes[0][0].plot(subsetEpochs, subsetLosses, color="#c75b12", linewidth=2.2, marker="o")
+    axes[0][0].set_title("Subset CNN Loss")
+    axes[0][0].set_xlabel("Epoch")
+    axes[0][0].set_ylabel("Cross-Entropy")
+    axes[0][0].grid(alpha=0.3)
+
+    axes[0][1].plot(subsetEpochs, subsetTrainAccuracies, color="#6d904f", linewidth=2.2, marker="o", label="Train")
+    axes[0][1].plot(subsetEpochs, subsetTestAccuracies, color="#1f6f8b", linewidth=2.2, marker="o", label="Test")
+    axes[0][1].set_title("Subset CNN Accuracy")
+    axes[0][1].set_xlabel("Epoch")
+    axes[0][1].set_ylabel("Accuracy")
+    axes[0][1].set_ylim(0, 1)
+    axes[0][1].grid(alpha=0.3)
+    axes[0][1].legend()
+
+    axes[1][0].plot(fullEpochs, fullLosses, color="#a61c3c", linewidth=2.2, marker="o")
+    axes[1][0].set_title("Full IDX Softmax Loss")
+    axes[1][0].set_xlabel("Epoch")
+    axes[1][0].set_ylabel("Cross-Entropy")
+    axes[1][0].grid(alpha=0.3)
+
+    axes[1][1].plot(fullEpochs, fullTrainAccuracies, color="#3d7d3a", linewidth=2.2, marker="o", label="Train sample")
+    axes[1][1].plot(fullEpochs, fullTestAccuracies, color="#124c7c", linewidth=2.2, marker="o", label="Test")
+    axes[1][1].set_title("Full IDX Softmax Accuracy")
+    axes[1][1].set_xlabel("Epoch")
+    axes[1][1].set_ylabel("Accuracy")
+    axes[1][1].set_ylim(0, 1)
+    axes[1][1].grid(alpha=0.3)
+    axes[1][1].legend()
 
     figure.tight_layout()
     figure.savefig(outputPath, dpi=200, bbox_inches="tight")
@@ -228,20 +299,52 @@ def save_dataset_samples(images, labels, outputPath):
     plot.close(figure)
 
 
-def save_confusion_matrix(confusionMatrix, outputPath):
-    figure, axis = plot.subplots(figsize=(6.3, 5.4))
-    heatmap = axis.imshow(confusionMatrix, cmap="Blues")
-    axis.set_title("MNIST Confusion Matrix")
-    axis.set_xlabel("Predicted label")
-    axis.set_ylabel("True label")
-    axis.set_xticks(range(10))
-    axis.set_yticks(range(10))
+def save_confusion_matrices(subsetMatrix, fullMatrix, outputPath):
+    figure, axes = plot.subplots(1, 2, figsize=(12, 5.2))
 
-    for rowIndex in range(10):
-        for columnIndex in range(10):
-            axis.text(columnIndex, rowIndex, str(confusionMatrix[rowIndex][columnIndex]), ha="center", va="center", color="#132238", fontsize=8)
+    for axis, matrix, title in [
+        (axes[0], subsetMatrix, "Subset CNN"),
+        (axes[1], fullMatrix, "Full IDX Softmax"),
+    ]:
+        heatmap = axis.imshow(matrix, cmap="Blues")
+        axis.set_title(title)
+        axis.set_xlabel("Predicted label")
+        axis.set_ylabel("True label")
+        axis.set_xticks(range(10))
+        axis.set_yticks(range(10))
 
-    figure.colorbar(heatmap, ax=axis, fraction=0.046, pad=0.04)
+        for rowIndex in range(10):
+            for columnIndex in range(10):
+                axis.text(columnIndex, rowIndex, str(matrix[rowIndex][columnIndex]), ha="center", va="center", color="#132238", fontsize=7)
+
+        figure.colorbar(heatmap, ax=axis, fraction=0.046, pad=0.04)
+
+    figure.tight_layout()
+    figure.savefig(outputPath, dpi=200, bbox_inches="tight")
+    plot.close(figure)
+
+
+def save_experiment_comparison(subsetMetrics, fullMetrics, outputPath):
+    figure, axes = plot.subplots(1, 2, figsize=(11.5, 4.2))
+
+    experimentNames = ["Subset CNN", "Full IDX Softmax"]
+    testAccuracies = [subsetMetrics["final_test_accuracy"], fullMetrics["final_test_accuracy"]]
+    trainSampleCounts = [subsetMetrics["train_samples"], fullMetrics["train_samples"]]
+    testSampleCounts = [subsetMetrics["test_samples"], fullMetrics["test_samples"]]
+
+    axes[0].bar(experimentNames, testAccuracies, color=["#f4a261", "#2a9d8f"])
+    axes[0].set_title("Final Test Accuracy")
+    axes[0].set_ylim(0, 1)
+    axes[0].set_ylabel("Accuracy")
+    axes[0].grid(axis="y", alpha=0.3)
+
+    axes[1].bar(experimentNames, trainSampleCounts, color="#6c8ebf", label="Train samples")
+    axes[1].bar(experimentNames, testSampleCounts, color="#93c47d", label="Test samples")
+    axes[1].set_title("Dataset Sizes")
+    axes[1].set_ylabel("Samples")
+    axes[1].grid(axis="y", alpha=0.3)
+    axes[1].legend()
+
     figure.tight_layout()
     figure.savefig(outputPath, dpi=200, bbox_inches="tight")
     plot.close(figure)
@@ -335,14 +438,11 @@ def trace_model(model, sampleInput):
     return tracedBlocks
 
 
-def save_architecture_diagram(model, sampleInput, outputPath):
-    blocks = trace_model(model, sampleInput)
-    figureWidth = max(12, len(blocks) * 1.7)
-    figure, axis = plot.subplots(figsize=(figureWidth, 3.1))
-
+def draw_architecture(axis, blocks, title):
     axis.set_xlim(0, len(blocks) * 1.9 + 0.8)
     axis.set_ylim(0, 2.4)
     axis.axis("off")
+    axis.set_title(title, fontsize=12)
 
     xPosition = 0.6
 
@@ -363,7 +463,7 @@ def save_architecture_diagram(model, sampleInput, outputPath):
             f"{block['name']}\n{format_shape(block['shape'])}",
             ha="center",
             va="center",
-            fontsize=10,
+            fontsize=9,
         )
 
         if index < len(blocks) - 1:
@@ -379,29 +479,44 @@ def save_architecture_diagram(model, sampleInput, outputPath):
 
         xPosition += 1.9
 
+
+def save_architecture_diagram(subsetModel, subsetSampleInput, fullModel, fullSampleInput, outputPath):
+    subsetBlocks = trace_model(subsetModel, subsetSampleInput)
+    fullBlocks = trace_model(fullModel, fullSampleInput)
+
+    figure, axes = plot.subplots(2, 1, figsize=(12, 5.8))
+    draw_architecture(axes[0], subsetBlocks, "Subset CNN")
+    draw_architecture(axes[1], fullBlocks, "Full IDX Softmax")
     figure.tight_layout()
     figure.savefig(outputPath, dpi=200, bbox_inches="tight")
     plot.close(figure)
 
 
-def train_and_evaluate():
-    PAPER_FIGURES_DIRECTORY.mkdir(parents=True, exist_ok=True)
-
-    datasetSource, trainInputs, trainOutputs, trainLabels, testInputs, testOutputs, testLabels = load_mnist_data()
+def run_subset_experiment(trainImagesFilePath, trainLabelsFilePath, testImagesFilePath, testLabelsFilePath):
+    trainInputs, trainOutputs, trainLabels = load_balanced_idx_split(
+        trainImagesFilePath,
+        trainLabelsFilePath,
+        SUBSET_TRAIN_SAMPLES_PER_CLASS,
+    )
+    testInputs, testOutputs, testLabels = load_balanced_idx_split(
+        testImagesFilePath,
+        testLabelsFilePath,
+        SUBSET_TEST_SAMPLES_PER_CLASS,
+    )
 
     trainDataset = Dataset(
         size=len(trainInputs),
         inputs=trainInputs,
         outputs=trainOutputs,
-        batchSize=BATCH_SIZE,
+        batchSize=SUBSET_BATCH_SIZE,
         seed=0,
         appendBatchResidue=False,
     )
 
-    model = create_model()
+    model = create_subset_model()
     history = []
 
-    for epoch in range(1, EPOCHS + 1):
+    for epoch in range(1, SUBSET_EPOCHS + 1):
         list(model.fitWithGradientTape(trainDataset, 1))
 
         trainLoss = calculate_mean_loss(model, trainInputs, trainOutputs)
@@ -416,7 +531,7 @@ def train_and_evaluate():
         })
 
         print(
-            f"Epoch {epoch}/{EPOCHS} | "
+            f"[subset] epoch {epoch}/{SUBSET_EPOCHS} | "
             f"train_loss={trainLoss:.4f} | "
             f"train_accuracy={trainAccuracy:.4f} | "
             f"test_accuracy={testAccuracy:.4f}",
@@ -425,20 +540,149 @@ def train_and_evaluate():
 
     confusionMatrix = build_confusion_matrix(model, testInputs, testLabels)
 
-    save_training_curves(history, PAPER_FIGURES_DIRECTORY / "mnist_training_curves.png")
-    save_dataset_samples(testInputs, testLabels, PAPER_FIGURES_DIRECTORY / "mnist_dataset_samples.png")
-    save_confusion_matrix(confusionMatrix, PAPER_FIGURES_DIRECTORY / "mnist_confusion_matrix.png")
-    save_architecture_diagram(model, testInputs[0], PAPER_FIGURES_DIRECTORY / "mnist_network_architecture.png")
-
     metrics = {
-        "dataset_source": datasetSource,
+        "experiment": "subset_cnn",
+        "dataset_source": "idx",
         "train_samples": len(trainInputs),
         "test_samples": len(testInputs),
-        "epochs": EPOCHS,
+        "epochs": SUBSET_EPOCHS,
         "history": history,
         "architecture": [layer_label(layer) for layer in model.layers],
         "final_train_accuracy": history[-1]["train_accuracy"],
         "final_test_accuracy": history[-1]["test_accuracy"],
+    }
+
+    return {
+        "model": model,
+        "train_inputs": trainInputs,
+        "train_outputs": trainOutputs,
+        "train_labels": trainLabels,
+        "test_inputs": testInputs,
+        "test_outputs": testOutputs,
+        "test_labels": testLabels,
+        "confusion_matrix": confusionMatrix,
+        "metrics": metrics,
+    }
+
+
+def run_full_experiment(trainImagesFilePath, trainLabelsFilePath, testImagesFilePath, testLabelsFilePath):
+    trainDataset = MnistDataset(
+        imagesFilePath=trainImagesFilePath,
+        labelsFilePath=trainLabelsFilePath,
+        batchSize=FULL_BATCH_SIZE,
+        normalize=True,
+        oneHot=True,
+        lazy=True,
+        seed=0,
+    )
+    testDataset = MnistDataset(
+        imagesFilePath=testImagesFilePath,
+        labelsFilePath=testLabelsFilePath,
+        batchSize=FULL_BATCH_SIZE,
+        normalize=True,
+        oneHot=True,
+        lazy=True,
+        seed=0,
+    )
+
+    model = create_full_model()
+    history = []
+
+    for epoch in range(1, FULL_EPOCHS + 1):
+        list(model.fitWithGradientTape(trainDataset, 1))
+
+        trainLoss = calculate_dataset_mean_loss(model, trainDataset, FULL_TRAIN_EVAL_LIMIT)
+        trainAccuracy = calculate_dataset_accuracy(model, trainDataset, FULL_TRAIN_EVAL_LIMIT)
+        testAccuracy = calculate_dataset_accuracy(model, testDataset, FULL_TEST_EVAL_LIMIT)
+
+        history.append({
+            "epoch": epoch,
+            "train_loss": trainLoss,
+            "train_accuracy": trainAccuracy,
+            "test_accuracy": testAccuracy,
+        })
+
+        print(
+            f"[full] epoch {epoch}/{FULL_EPOCHS} | "
+            f"train_loss={trainLoss:.4f} | "
+            f"train_accuracy(sample)={trainAccuracy:.4f} | "
+            f"test_accuracy={testAccuracy:.4f}",
+            flush=True,
+        )
+
+    confusionMatrix = build_dataset_confusion_matrix(model, testDataset, FULL_TEST_EVAL_LIMIT)
+
+    metrics = {
+        "experiment": "full_softmax",
+        "dataset_source": "idx",
+        "train_samples": trainDataset.size,
+        "test_samples": min(FULL_TEST_EVAL_LIMIT, testDataset.size),
+        "epochs": FULL_EPOCHS,
+        "history": history,
+        "architecture": [layer_label(layer) for layer in model.layers],
+        "final_train_accuracy": history[-1]["train_accuracy"],
+        "final_test_accuracy": history[-1]["test_accuracy"],
+        "train_accuracy_note": f"Measured on the first {FULL_TRAIN_EVAL_LIMIT} training samples after each epoch.",
+    }
+
+    return {
+        "model": model,
+        "train_dataset": trainDataset,
+        "test_dataset": testDataset,
+        "confusion_matrix": confusionMatrix,
+        "metrics": metrics,
+    }
+
+
+def train_and_evaluate():
+    PAPER_FIGURES_DIRECTORY.mkdir(parents=True, exist_ok=True)
+
+    trainImagesFilePath, trainLabelsFilePath, testImagesFilePath, testLabelsFilePath = resolve_idx_paths()
+
+    subsetExperiment = run_subset_experiment(
+        trainImagesFilePath,
+        trainLabelsFilePath,
+        testImagesFilePath,
+        testLabelsFilePath,
+    )
+    fullExperiment = run_full_experiment(
+        trainImagesFilePath,
+        trainLabelsFilePath,
+        testImagesFilePath,
+        testLabelsFilePath,
+    )
+
+    save_dataset_samples(
+        subsetExperiment["test_inputs"],
+        subsetExperiment["test_labels"],
+        PAPER_FIGURES_DIRECTORY / "mnist_dataset_samples.png",
+    )
+    save_architecture_diagram(
+        subsetExperiment["model"],
+        subsetExperiment["test_inputs"][0],
+        fullExperiment["model"],
+        fullExperiment["test_dataset"].loadImage(0),
+        PAPER_FIGURES_DIRECTORY / "mnist_network_architecture.png",
+    )
+    save_training_curves(
+        subsetExperiment["metrics"]["history"],
+        fullExperiment["metrics"]["history"],
+        PAPER_FIGURES_DIRECTORY / "mnist_training_curves.png",
+    )
+    save_confusion_matrices(
+        subsetExperiment["confusion_matrix"],
+        fullExperiment["confusion_matrix"],
+        PAPER_FIGURES_DIRECTORY / "mnist_confusion_matrix.png",
+    )
+    save_experiment_comparison(
+        subsetExperiment["metrics"],
+        fullExperiment["metrics"],
+        PAPER_FIGURES_DIRECTORY / "mnist_experiment_comparison.png",
+    )
+
+    metrics = {
+        "subset_experiment": subsetExperiment["metrics"],
+        "full_experiment": fullExperiment["metrics"],
     }
 
     metricsPath = PAPER_FIGURES_DIRECTORY / "mnist_conv2d_metrics.json"
